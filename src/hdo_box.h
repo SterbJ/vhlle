@@ -29,9 +29,9 @@ public:
  // mode: PREDICT = used in predictor step; calculates fluxes for dt/2
  // CORRECT = used in corrector step, calculates fluxes based on predicted
  // half-step quantities
- void hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix, int iy, int iz);
+ void hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix);
  // viscous flux \delta F
- void visc_flux(Cell *left, Cell *right, int direction);
+ void visc_flux(Cell *left, Cell *right, int direction, double ix, double iy, double iz);
  // viscous source step for a given cell (ix,iy,iz)
  void visc_source_step(int ix, int iy, int iz);
  void source(double tau, double x, double y, double z, double Q[7],
@@ -43,9 +43,9 @@ public:
  // expansion scalar \partial_mu u^\mu (du)
  // for a given cell (ix,iy,iz)
  void NSquant(int ix, int iy, int iz, double pi[][4], double &Pi,
-              double dmu[4][4], double &du);
+              double dmu[4][4], double dmu0[4][4], double &du, double &du0);
  // sets the values of shear stress/bulk pressure in NS limit in all hydro grid
- void setNSvalues();
+// void setNSvalues();
  // advances numerical solution for shear/bulk in a whole grid over one
  // timestep
  void ISformal();
@@ -57,4 +57,10 @@ public:
  #ifdef CARTESIAN
  double time() { return t; }
  #endif
+    
+    int sgn(double v) {
+      if (v < 0) return -1;
+      if (v == 0) return 0;
+      if (v > 0) return 1;
+    }
 };

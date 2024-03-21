@@ -27,7 +27,7 @@ public:
        int _nz, double _minx, double _maxx, double _miny, double _maxy,
        double _minz, double _maxz, double dt, double eCrit);
  ~Fluid();
- void initOutput(const char *dir, double tau0, bool hsOnly);
+// void initOutput(const char *dir, double tau0, bool hsOnly);
  int output_xy_spacing;
  int output_eta_points;
  int output_tau_spacing;
@@ -46,17 +46,17 @@ public:
  inline double getZ(int iz) { return minz + iz * dz; }
  inline double geteCrit() { return ecrit; }
 
- void getCMFvariables(Cell *c, double tau, double &e, double &nb, double &nq,
-                      double &ns, double &vx, double &vy, double &Y);
+// void getCMFvariables(Cell *c, double tau, double &e, double &nb, double &nq,
+//                      double &ns, double &vx, double &vy, double &Y);
 
   // preiodic boundary in 3D
-  inline Cell* getCell(int ix, int iy, int iz) 
-	{ ix = ix>0 ? ix : nx+ix;
-   ix = ix<nx ? ix : ix-nx ;
-   iy = iy>0 ? iy : ny+iy;
-   iy = iy<ny ? iy : iy-ny ;
-   iz = iz>0 ? iz : nz+iz;
-   iz = iz<nz ? iz : iz-nz ;
+  inline Cell* getCell(int ix, int iy, int iz)
+    { ix = ix>=0 ? ix : nx+ix;
+      ix = ix<nx ? ix : ix-nx ;
+      iy = iy>=0 ? iy : ny+iy;
+      iy = iy<ny ? iy : iy-ny ;
+      iz = iz>=0 ? iz : nz+iz;
+      iz = iz<nz ? iz : iz-nz ;
    return &cell[ix + nx * iy + nx * ny * iz] ; }
 
   // nonreflecting boundary
@@ -70,12 +70,12 @@ public:
 //    return &cell[ix + nx * iy + nx * ny * iz];
 //  }
 
- void correctImagCells(void);      // only ideal hydro part, Q + Qh
- void correctImagCellsFull(void);  // correct ideal+viscous, Q + pi
+// void correctImagCells(void);      // only ideal hydro part, Q + Qh
+// void correctImagCellsFull(void);  // correct ideal+viscous, Q + pi
  void updateM(double tau, double dt);
 
- void outputGnuplot(double tau);
- void outputSurface(double tau);
- void outputCorona(double tau);
- void InitialAnisotropies(double tau0);
+// void outputGnuplot(double tau);
+// void outputSurface(double tau);
+// void outputCorona(double tau);
+// void InitialAnisotropies(double tau0);
 };

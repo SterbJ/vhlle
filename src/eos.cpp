@@ -13,7 +13,7 @@ const double bagt = pow(247.19 / 197.32, 4) / gevtofm;
 const double deg = 16.0 + 3.0 * 12.0 * (7.0 / 8.0);
 
 // EoS choise
-#define TABLE  // Laine, etc
+#define SIMPLE  // Laine, etc
 //#define SIMPLE  // p=e/3
 
 double EoS::s(double e, double nb, double nq, double ns) {

@@ -74,7 +74,7 @@ void Hydro::setDtau(double deltaTau) {
  }
 }
 
-void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode) {
+void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix, int iy, int iz) {
  // for all variables, suffix "l" = left state, "r" = right state
  // with respect to the cell boundary
  double el, er, pl, pr, nbl, nql, nsl, nbr, nqr, nsr, vxl, vxr, vyl, vyr, vzl,
@@ -190,6 +190,8 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode) {
                    (vxl - eos->cs()) / (1 - vxl * eos->cs())));
   br = max(0., max((vb + csb) / (1 + vb * csb),
                    (vxr + eos->cs()) / (1 + vxr * eos->cs())));
+//     bl=min(0.,-eos->cs());
+//     br=max(0.,eos->cs());
 
   dx = f->getDx();
 
@@ -286,6 +288,31 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode) {
  flux[NS_] = tauFactor * dta / dx *
              (-bl * br * (Usl - Usr) + br * Fsl - bl * Fsr) / (-bl + br);
 
+//    if(ix<=40){
+//        cout.precision(30);
+//    }
+//    else{
+//        cout.precision(30);
+//    }
+//    if(direction==1){
+////            if(ix==20 || ix ==19 || ix ==21 || ix ==60 || ix ==61 || ix ==59){
+//        if(ix==38 || ix==39 || ix== 40 || ix==41){
+//            if(iy==1 && iz==1 && direction==1 && mode==0){
+//
+//                cout << mode << setw(12) << direction << endl << endl;
+////                cout << ix << "     " << bl << "    " << br << endl;
+//                cout << ix << endl;
+//                cout << flux[T_] << setw(30) << flux[X_] << setw(12) << flux[Y_] << setw(12) << flux[Z_] << setw(12) << flux[NB_] << setw(12) << flux[NQ_] << setw(12) << flux[NS_] << endl << endl;
+//                cout << "bl=" << setw(3) << bl << setw(10) << "br=" << setw(3) << br << setw(10) << "U1l=" << setw(3) << U1l << setw(10) << "U1r=" << setw(3) << U1r << setw(10) << "Fxl=" << setw(3) << Fxl << setw(10) << "Fxr=" << setw(3) << Fxr << endl;
+//                cout << "gammal=" << setw(3) << gammal << setw(10) << "vxl=" << setw(3) << vxl << setw(10) << "gammar=" << setw(3) << gammar << setw(10) << "vxr=" << setw(3) << vxr << setw(10) << "pl=" << setw(3) << pl << setw(10) << "pr=" << setw(3) << pr << endl;
+//                cout << "U4l=" << setw(3) << U4l << setw(10) << "U4r=" << setw(3) << U4r << setw(10) << "Ftl=" << setw(3) << Ftl << setw(10) << "Ftr=" << setw(3) << Ftr << endl;
+//                cout << "el=" << setw(3) << el << setw(10) << "er=" << setw(3) << er << endl;
+//                cout << "dta=" << setw(3) << dta << setw(10) << "dx=" << setw(3) << dx << setw(10) << "tauFactor=" << setw(3) << tauFactor << endl;
+//                cout << "U4l - U4r=" << setw(3) << U4l - U4r << endl;
+//            }
+//        }
+//    }
+    
  if (flux[NB_] != flux[NB_]) {  // if things failed
   cout << "---- error in hlle_flux: f_nb undefined!\n";
   cout << setw(12) << U4l << setw(12) << U1l << setw(12) << U2l << setw(12)
@@ -405,7 +432,7 @@ void Hydro::NSquant(int ix, int iy, int iz, double pi[4][4], double &Pi,
  const double UDIFF = 3.0;
  double e0, e1, p, nb, nq, ns, vx1, vy1, vz1, vx0, vy0, vz0, vxH, vyH, vzH;
  double ut0, ux0, uy0, uz0, ut1, ux1, uy1, uz1;
- //	double dmu [4][4] ; // \partial_\mu u^\nu matrix
+ //    double dmu [4][4] ; // \partial_\mu u^\nu matrix
  // coordinates: 0=tau, 1=x, 2=y, 3=eta
  double Z[4][4][4][4];  // Z[mu][nu][lambda][rho]
  double uuu[4];         // the 4-velocity
@@ -641,7 +668,9 @@ void Hydro::setNSvalues() {
     piNS[3][3] = -2.0 * piNS[1][1];
     PiNS = 0.0;
     for (int i = 0; i < 4; i++)
-     for (int j = 0; j <= i; j++) c->setpi(i, j, piNS[i][j]);
+     for (int j = 0; j <= i; j++){
+         c->setpi(i, j, piNS[i][j]);
+     }
     c->setPi(PiNS);
    }
  cout << "setNS done\n";
@@ -686,6 +715,7 @@ void Hydro::ISformal() {
      for (int i = 0; i < 4; i++)
       flux[i] = tauMinusDt * (c->getpi(0, i) + c->getPi() * u[0] * u[i]);
      flux[0] += -tauMinusDt * c->getPi();
+     //   cout << c->getPi() << endl;
      c->addFlux(flux[0], flux[1], flux[2], flux[3], 0., 0., 0.);
      // now calculating viscous terms in NS limit
      NSquant(ix, iy, iz, piNS, PiNS, dmu, du);
@@ -694,7 +724,7 @@ void Hydro::ISformal() {
      trcoeff->getEta(e,nb, T, etaS, zetaS);
      const double s = eos->s(e, nb, nq, ns);
      const double eta = etaS * s;
-     // auxiliary variable sigmaNS = piNS / (2*eta), 
+     // auxiliary variable sigmaNS = piNS / (2*eta),
      // mainly to protect against division by zero in the eta=0 case.
      for(int i=0; i<4; i++)
      for(int j=0; j<4; j++) {
@@ -990,6 +1020,34 @@ void Hydro::performStep(void) {
 
  tau_z = dt / 2. / log(1 + dt / 2. / tau);
 
+    //    // vypis profilu energie
+          for (int ix = 0; ix < f->getNX(); ix++) {
+    //          for (int iy = 0; iy < f->getNY(); iy++){
+
+                  double e, p, nb, nq, ns, vx, vy, vz, cs, T, mub, muq, mus;
+                  Cell *c = f->getCell(ix, 0, 0);
+
+                  c -> getPrimVar(eos, tau, e, p, nb, nq, ns, vx, vy, vz);
+                  cs = eos->cs();
+                  eos->eos(e, 0., 0., 0., T, mub, mus, muq, p);
+
+              if(ix<=40){
+                  cout.precision(7);
+              }
+              else{
+                  cout.precision(7);
+              }
+
+//                  if(ix==20 || ix ==19 || ix ==21 || ix ==60 || ix ==61 || ix ==59){
+//                      if(ix==39 || ix== 40 || ix==41){
+
+                      cout << vx << "   " << vy << "    " << vz << "   " << f->getX(ix) << "      " << e << "       " << cs << "     " << T << "     " << p << endl;
+//                  }
+//              cout << f->getX(ix) << "      " << e - 1. << endl;
+
+//              }
+          }
+    
  //-----PREDICTOR-ideal
  for (int iy = 0; iy < f->getNY(); iy++)
   for (int iz = 0; iz < f->getNZ(); iz++)
@@ -1002,23 +1060,23 @@ void Hydro::performStep(void) {
  for (int iy = 0; iy < f->getNY(); iy++)
   for (int iz = 0; iz < f->getNZ(); iz++)
    for (int ix = 0; ix < f->getNX(); ix++) {
-    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix + 1, iy, iz), X_, PREDICT);
+    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix + 1, iy, iz), X_, PREDICT, ix, iy, iz);
    }
- //	cout << "predictor X done\n" ;
+ //    cout << "predictor X done\n" ;
  // Y dir
  for (int iz = 0; iz < f->getNZ(); iz++)
   for (int ix = 0; ix < f->getNX(); ix++)
    for (int iy = 0; iy < f->getNY(); iy++) {
-    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix, iy + 1, iz), Y_, PREDICT);
+    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix, iy + 1, iz), Y_, PREDICT, ix, iy, iz);
    }
- //	cout << "predictor Y done\n" ;
+ //    cout << "predictor Y done\n" ;
  // Z dir
  for (int ix = 0; ix < f->getNX(); ix++)
   for (int iy = 0; iy < f->getNY(); iy++)
    for (int iz = 0; iz < f->getNZ(); iz++) {
-    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix, iy, iz + 1), Z_, PREDICT);
+    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix, iy, iz + 1), Z_, PREDICT, ix, iy, iz);
    }
- //	cout << "predictor Z done\n" ;
+ //    cout << "predictor Z done\n" ;
 
  for (int iy = 0; iy < f->getNY(); iy++)
   for (int iz = 0; iz < f->getNZ(); iz++)
@@ -1028,7 +1086,43 @@ void Hydro::performStep(void) {
     c->updateQtoQhByFlux();
     c->clearFlux();
    }
-
+//
+//    //    // vypis profilu energie
+//          for (int ix = 0; ix < f->getNX(); ix++) {
+//    //          for (int iy = 0; iy < f->getNY(); iy++){
+//
+//                  double e, p, nb, nq, ns, vx, vy, vz, cs, T, mub, muq, mus;
+//                  double el, pl, vxl, vyl, vzl, er, pr, vxr, vyr, vzr;
+//
+//                  Cell *c = f->getCell(ix, 0, 0);
+//
+//                  c -> getPrimVar(eos, tau, e, p, nb, nq, ns, vx, vy, vz);
+//                  c -> getPrimVarRight(eos, tau, er, pr, nb, nq, ns, vxr, vyr, vzr,1);
+//                  c -> getPrimVarLeft(eos, tau, el, pl, nb, nq, ns, vxl, vyl, vzl,1);
+//                  cs = eos->cs();
+//                  eos->eos(e, 0., 0., 0., T, mub, mus, muq, p);
+//
+//              if(ix<=40){
+//                  cout.precision(15);
+//              }
+//              else{
+//                  cout.precision(15);
+//              }
+//
+////                  if(ix==20 || ix ==19 || ix ==21 || ix ==60 || ix ==61 || ix ==59){
+////                      if(ix==38 || ix==39 || ix== 40 || ix==41 || ix==42){
+//
+////                      cout << vxl << "   " << f->getX(ix) << "      " << el-1 << "       " << cs << "     " << T << "     " << pl << endl;
+////                      cout << vxr << "   " << f->getX(ix) << "      " << er-1 << "       " << cs << "     " << T << "     " << pr << endl;
+//                      cout << er << endl;
+//
+//
+////                  }
+////              cout << f->getX(ix) << "      " << e - 1. << endl;
+//
+////              }
+//          }
+    
  //----CORRECTOR-ideal
 
  tau_z = dt / log(1 + dt / tau);
@@ -1036,23 +1130,23 @@ void Hydro::performStep(void) {
  for (int iy = 0; iy < f->getNY(); iy++)
   for (int iz = 0; iz < f->getNZ(); iz++)
    for (int ix = 0; ix < f->getNX(); ix++) {
-    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix + 1, iy, iz), X_, CORRECT);
+    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix + 1, iy, iz), X_, CORRECT, ix, iy, iz);
    }
- //	cout << "corrector X done\n" ;
+ //    cout << "corrector X done\n" ;
  // Y dir
  for (int iz = 0; iz < f->getNZ(); iz++)
   for (int ix = 0; ix < f->getNX(); ix++)
    for (int iy = 0; iy < f->getNY(); iy++) {
-    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix, iy + 1, iz), Y_, CORRECT);
+    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix, iy + 1, iz), Y_, CORRECT, ix, iy, iz);
    }
- //	cout << "corrector Y done\n" ;
+ //    cout << "corrector Y done\n" ;
  // Z dir
  for (int ix = 0; ix < f->getNX(); ix++)
   for (int iy = 0; iy < f->getNY(); iy++)
    for (int iz = 0; iz < f->getNZ(); iz++) {
-    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix, iy, iz + 1), Z_, CORRECT);
+    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix, iy, iz + 1), Z_, CORRECT, ix, iy, iz);
    }
- //	cout << "corrector Z done\n" ;
+ //    cout << "corrector Z done\n" ;
 
  for (int iy = 0; iy < f->getNY(); iy++)
   for (int iz = 0; iz < f->getNZ(); iz++)
@@ -1069,6 +1163,35 @@ void Hydro::performStep(void) {
  #endif
  //f->correctImagCells();  // disabled in box mode
 
+    
+//    //    // vypis profilu energie
+//          for (int ix = 0; ix < f->getNX(); ix++) {
+//    //          for (int iy = 0; iy < f->getNY(); iy++){
+//
+//                  double e, p, nb, nq, ns, vx, vy, vz, cs, T, mub, muq, mus;
+//                  Cell *c = f->getCell(ix, 0, 0);
+//
+//                  c -> getPrimVar(eos, tau, e, p, nb, nq, ns, vx, vy, vz);
+//                  cs = eos->cs();
+//                  eos->eos(e, 0., 0., 0., T, mub, mus, muq, p);
+//
+//              if(ix<=40){
+//                  cout.precision(7);
+//              }
+//              else{
+//                  cout.precision(7);
+//              }
+//
+////                  if(ix==20 || ix ==19 || ix ==21 || ix ==60 || ix ==61 || ix ==59){
+////                      if(ix==39 || ix== 40 || ix==41){
+//
+//                      cout << vx << "   " << f->getX(ix) << "      " << e-1 << "       " << cs << "     " << T << "     " << p-1./3 << endl;
+////                  }
+////              cout << f->getX(ix) << "      " << e - 1. << endl;
+//
+////              }
+//          }
+    
  //===== viscous part ======
  if (trcoeff->isViscous()) {
   ISformal();  // evolution of viscous quantities according to IS equations
@@ -1079,14 +1202,14 @@ void Hydro::performStep(void) {
     for (int ix = 0; ix < f->getNX(); ix++) {
      visc_flux(f->getCell(ix, iy, iz), f->getCell(ix + 1, iy, iz), X_);
     }
-  //	cout << "visc_flux X done\n" ;
+  //    cout << "visc_flux X done\n" ;
   // Y dir
   for (int iz = 0; iz < f->getNZ(); iz++)
    for (int ix = 0; ix < f->getNX(); ix++)
     for (int iy = 0; iy < f->getNY(); iy++) {
      visc_flux(f->getCell(ix, iy, iz), f->getCell(ix, iy + 1, iz), Y_);
     }
-  //	cout << "visc_flux Y done\n" ;
+  //    cout << "visc_flux Y done\n" ;
   // Z dir
   for (int ix = 0; ix < f->getNX(); ix++)
    for (int iy = 0; iy < f->getNY(); iy++)
@@ -1103,6 +1226,35 @@ void Hydro::performStep(void) {
     }
  } else {  // end viscous part
  }
+    
+//    //    // vypis profilu energie
+//          for (int ix = 0; ix < f->getNX(); ix++) {
+//    //          for (int iy = 0; iy < f->getNY(); iy++){
+//
+//                  double e, p, nb, nq, ns, vx, vy, vz, cs, T, mub, muq, mus;
+//                  Cell *c = f->getCell(ix, 0, 0);
+//
+//                  c -> getPrimVar(eos, tau, e, p, nb, nq, ns, vx, vy, vz);
+//                  cs = eos->cs();
+//                  eos->eos(e, 0., 0., 0., T, mub, mus, muq, p);
+//
+//              if(ix<=40){
+//                  cout.precision(7);
+//              }
+//              else{
+//                  cout.precision(7);
+//              }
+//
+////                  if(ix==20 || ix ==19 || ix ==21 || ix ==60 || ix ==61 || ix ==59){
+////                      if(ix==38 || ix==39 || ix== 40 || ix==41){
+//
+//                      cout << vx << "   " << f->getX(ix) << "      " << e-1 << "       " << cs << "     " << T << "     " << p-1./3 << endl;
+////                  }
+////              cout << f->getX(ix) << "      " << e - 1. << endl;
+//
+////              }
+//          }
+    
  //==== finishing work ====
  //f->correctImagCellsFull();  // disabled in box mode
 }
