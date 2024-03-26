@@ -1033,6 +1033,7 @@ void Hydro::ISformal() {
        c->setpiH0(i, j, (c->getpi(i, j) - piNS[i][j]) *
                                 exp(-dt / 2.0 / gamma / taupi0) +// how to do this?
                             piNS[i][j]);
+       c->setpiH0(i, j, (c->getpi_bck(i, j) - piNS0[i][j]) * dt / 2.0  / gamma / (taupi0*taupi0) * delta_taupi );
 #else
           if(taupi0>0.5*dt){// or waht the condition should be?
               c->setpiH0(i, j, c->getpi(i, j) -
