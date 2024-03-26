@@ -18,19 +18,19 @@ public:
  // returns (optionally temperature dependent) eta/s and zeta/s
  void getEta(double e, double rho, double T, double &_etaS, double &_zetaS);
  // returns shear and bulk relaxation times
- void getTau(double e, double rho, double T, double deltaT, double &_taupi, double &_tauPi);
+ void getTau(double e0, double e, double rho, double T0, double dT, double &_taupi, double &_delta_taupi, double &_tauPi, double &_delta_tauPi);
  // deltapipi, taupipi, lambdapiPi * divided by tau_pi * !
  void getOther(double e, double nb, double nq, double ns,
    double &deltapipi, double &taupipi, double &lambdapiPi, double &phi7) {
   deltapipi = 4./3.;
-     taupipi = 0.;//10./7.;
+     taupipi = 10./7.;
      lambdapiPi = 6./5.;
-     phi7 = 0.; //9./70./eos->p(e, nb, nq, ns);
+     phi7 = 9./70./eos->p(e, nb, nq, ns);
   if(std::isinf(phi7)) phi7=0.0;
  }
  void getOtherBulk(double e, double nb, double nq, double ns,
    double &delPiPi, double &lamPipi) {
-     delPiPi = 2./3.;  lamPipi = 0.;//8./5.*(1. / 3. - eos->cs2(e));
+     delPiPi = 2./3.;  lamPipi = 8./5.*(1. / 3. - eos->cs2(e));
  }
  // isViscous tells whether the fluid is viscous or inviscid
  inline bool isViscous() {

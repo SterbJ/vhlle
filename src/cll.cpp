@@ -448,13 +448,12 @@ void Cell::getPrimVarPrevQ0(EoS *eos, double tau, double &_e, double &_p,
 void Cell::setPrimVar(EoS *eos, double tau, double _e, double _nb, double _nq,
                       double _ns, double _vx, double _vy, double _vz, double e0, double vx0, double vy0, double vz0) {
  const double gamma0 = 1. / sqrt(1 - vx0 * vx0 - vy0 * vy0 - vz0 * vz0);
-    double gamma_delta = vx0 * _vx + vy0 * _vy + vz0 * _vz;
     double p0 = eos->p(e0, _nb, _nq, _ns);
     const double p = eos->p(_e+e0, _nb, _nq, _ns) - eos->p(e0, _nb, _nq, _ns);
- Q[T_] = tau * ( 2 * (e0 + p0) * gamma0 * gamma_delta + (_e + p) * gamma0 * gamma0 - p );
- Q[X_] = tau * ( (e0 + p0) * (gamma0 * vx0 * gamma_delta + gamma0 * _vx) + (_e + p) * gamma0 * gamma0 * vx0 );
- Q[Y_] = tau * ( (e0 + p0) * (gamma0 * vy0 * gamma_delta + gamma0 * _vy) + (_e + p) * gamma0 * gamma0 * vy0 );
- Q[Z_] = tau * ( (e0 + p0) * (gamma0 * vz0 * gamma_delta + gamma0 * _vz) + (_e + p) * gamma0 * gamma0 * vz0 );
+ Q[T_] = tau * ( (_e + p) * gamma0 * gamma0 - p );
+ Q[X_] = tau * ( (e0 + p0) * gamma0 * _vx + (_e + p) * gamma0 * gamma0 * vx0 );
+ Q[Y_] = tau * ( (e0 + p0) * gamma0 * _vy + (_e + p) * gamma0 * gamma0 * vy0 );
+ Q[Z_] = tau * ( (e0 + p0) * gamma0 * _vz + (_e + p) * gamma0 * gamma0 * vz0 );
  Q[NB_] = tau * _nb * gamma0;
  Q[NQ_] = tau * _nq * gamma0;
  Q[NS_] = tau * _ns * gamma0;

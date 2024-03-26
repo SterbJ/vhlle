@@ -558,11 +558,19 @@ void Hydro::NSquant(int ix, int iy, int iz, double pi[4][4], double &Pi, double 
 #endif
     
     //############## get transport coefficients
-    double T, mub, muq, mus;
+    double T0, mub, muq, mus;
+//    double T1;
     double etaS, zetaS;
-    double s = eos->s(e_01, nb, nq, ns);  // background entropy density in the current cell
-    eos->eos(e_01, nb, nq, ns, T, mub, muq, mus, p_0);//???????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
-    trcoeff->getEta(e_01, nb, T, etaS, zetaS);//
+    double h = 0.01;
+    double delta_s;
+    double s0 = eos->s(e_01, nb, nq, ns);  // background entropy density in the current cell
+    double dS = (eos->s(e_01 + h, nb, nq, ns) - s0 ) / h;
+//    eos->eos(e_01 + h, nb, nq, ns, T1, mub, muq, mus, p_0);
+    eos->eos(e_01, nb, nq, ns, T0, mub, muq, mus, p_0);
+//    double dT = (T1 - T0) / h;
+    delta_s = dS * e1;
+    
+    trcoeff->getEta(e_01, nb, T0, etaS, zetaS);
     //##############
     // if(e1<0.00004) s=0. ; // negative pressure due to pi^zz for small e
     
@@ -833,7 +841,8 @@ void Hydro::NSquant(int ix, int iy, int iz, double pi[4][4], double &Pi, double 
                 pi[i][j] = 0.0;
                 for (int k = 0; k < 4; k++)
                     for (int l = 0; l < 4; l++) {
-                        pi[i][j] += ( Z0[i][j][k][l] * dmu[k][l] - Z[i][j][k][l] * dmu0[k][l] ) * 2.0 * etaS * s / 5.068;
+                        pi[i][j] += ( Z0[i][j][k][l] * dmu[k][l] - Z[i][j][k][l] * dmu0[k][l] ) * 2.0 * etaS * s0 / 5.068
+                                    + Z0[i][j][k][l] * dmu0[k][l] * 2.0 * etaS * delta_s / 5.068 ;
 //                        cout << Z0[i][j][k][l] << "     " << dmu[k][l] << "     " << i << "     " << j << "     " << k << "     " << l << endl;
 //                        if(i==1&&j==1){
 //                            pi[i][j]=0.;
@@ -844,8 +853,7 @@ void Hydro::NSquant(int ix, int iy, int iz, double pi[4][4], double &Pi, double 
 //                }
             }
 
-        Pi = -zetaS * s * (dmu[0][0] + dmu[1][1] + dmu[2][2] + dmu[3][3]) / //ZKONTROLOVAT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        5.068;  // fm^{-4} --> GeV/fm^3
+        Pi = -zetaS * s0 * (dmu[0][0] + dmu[1][1] + dmu[2][2] + dmu[3][3]) / 5.068 - zetaS * delta_s * (dmu0[0][0] + dmu0[1][1] + dmu0[2][2] + dmu0[3][3]) / 5.068;  // 5.068 -> fm^{-4} --> GeV/fm^3
         du = dmu[0][0] + dmu[1][1] + dmu[2][2] + dmu[3][3];
         du0 = dmu0[0][0] + dmu0[1][1] + dmu0[2][2] + dmu0[3][3];
         //--------- debug part: NaN/inf check, trace check, diag check, transversality
@@ -895,7 +903,7 @@ void Hydro::NSquant(int ix, int iy, int iz, double pi[4][4], double &Pi, double 
 //}
 
 void Hydro::ISformal() {
- double e, p, nb, nq, ns, vx, vy, vz, T, mub, muq, mus;
+ double e, p, nb, nq, ns, vx, vy, vz, T0, mub, muq, mus;
  double e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0;
  double piNS[4][4], piNS0[4][4], sigNS[4][4], sigNS0[4][4], PiNS, PiNS0, dmu[4][4], dmu0[4][4], du, du0, pi[4][4], piH[4][4], Pi, PiH, dpi0[4][4][4], dpi0H[4][4][4];
  const double gmumu[4] = {1., -1., -1., -1.};
@@ -954,7 +962,10 @@ void Hydro::ISformal() {
         // now calculating viscous terms in NS limit
         NSquant(ix, iy, iz, piNS, PiNS, dmu, dmu0, du, du0);
         PiNS0 = 0.;
-
+        for (int i = 0; i < 4; i++)
+            for (int j = 0; j <= i; j++) {
+                piNS0[i][j]=0.;
+            }
 // derivative of background pi^munu
 #ifdef CARTESIAN
     double tauPlusHalf_0 = 1.0;
@@ -971,22 +982,25 @@ void Hydro::ISformal() {
     }
         
         
-        
-     eos->eos(e_0, nb, nq, ns, T, mub, muq, mus, p_0);//????????????????????????????????????????
-     double deltaT, fullT;
-     eos->eos(e+e_0,nb,nq,ns,fullT,mub,muq,mus,p);
-        deltaT=fullT-T;
+     double T1;
+     double h = 0.01;
+     eos->eos(e_0, nb, nq, ns, T0, mub, muq, mus, p_0);
+     eos->eos(e+e_0, nb, nq, ns, T1, mub, muq, mus, p_0);
+     double dT = (T1 - T0) / h ;
      double etaS, zetaS;
-     trcoeff->getEta(e_0, nb, T, etaS, zetaS);//??????????????????????????????????????????????????????
-     const double s = eos->s(e_0, nb, nq, ns);//??????????????????????????????????????????????????????????????????????????????????????????????????????????????
-     const double deltaS = eos->s(e_0+e,nb,nq,ns)-eos->s(e_0,nb,nq,ns);
-     const double eta = etaS * s;
+     trcoeff->getEta(e_0, nb, T0, etaS, zetaS);
+     const double s0 = eos->s(e_0, nb, nq, ns);
+     double dS = (eos->s(e_0 + h, nb, nq, ns) - s0 ) / h;
+     double delta_s = dS * e;
+     const double eta0 = etaS * s0;
+     const double delta_eta = etaS * delta_s;
+     double eta = eta0 + delta_eta;
      // auxiliary variable sigmaNS = piNS / (2*eta), 
      // mainly to protect against division by zero in the eta=0 case.
      for(int i=0; i<4; i++)
      for(int j=0; j<4; j++) {
-      sigNS[i][j] = 0.5 * piNS[i][j] / eta * 5.068;
       sigNS0[i][j] = 0.;
+      sigNS[i][j] = 0.5 * (piNS[i][j] * 5.068 - 2. * delta_eta * sigNS0[i][j] ) / eta0 ;
 //      sigNS0[i][j] = 0.5 * piNS0[i][j] / eta * 5.068;
          if(eta<=0.0){
              sigNS[i][j] = 0.0;
@@ -994,16 +1008,18 @@ void Hydro::ISformal() {
          }
      }
      //############# get relaxation times
-     double taupi, tauPi;
-     trcoeff->getTau(e_0, nb, T, deltaT, taupi, tauPi);
+     double taupi0, tauPi0;
+     double delta_taupi, delta_tauPi;
+     trcoeff->getTau(e_0, e, nb, T0, dT, taupi0, delta_taupi, tauPi0, delta_tauPi);
 //        cout << taupi << endl;
-     double deltapipi, taupipi, lambdapiPi, phi7, delPiPi, lamPipi;
+     double deltapipi, taupipi, lambdapiPi, phi7, phi70, delta_phi7, delPiPi, lamPipi;
      trcoeff->getOther(e_0, nb, nq, ns, deltapipi, taupipi, lambdapiPi, phi7);
-     phi7 = phi7/taupi;  // dividing by tau_pi here, to avoid NaNs when tau_pi==0
-     if(taupi<0.5*dt)
+     phi70 = phi7/taupi0;  // dividing by tau_pi here, to avoid NaNs when tau_pi==0
+     delta_phi7 = phi7 / (taupi0 * taupi0) * delta_taupi;
+     if(taupi0<0.5*dt)
       deltapipi = taupipi = lambdapiPi = phi7 = 0.0;
      trcoeff->getOtherBulk(e_0, nb, nq, ns, delPiPi, lamPipi);
-     if(tauPi<0.5*dt)
+     if(tauPi0<0.5*dt)
       delPiPi = lamPipi = 0.0;
      //#############
      double Delta[10];
@@ -1015,21 +1031,26 @@ void Hydro::ISformal() {
 
 #ifdef FORMAL_SOLUTION
        c->setpiH0(i, j, (c->getpi(i, j) - piNS[i][j]) *
-                                exp(-dt / 2.0 / gamma / taupi) +
+                                exp(-dt / 2.0 / gamma / taupi0) +// how to do this?
                             piNS[i][j]);
 #else
-      if(taupi>0.5*dt)
-       c->setpiH0(i, j, c->getpi(i, j) -
-          (c->getpi(i, j) - piNS[i][j]) * dt / 2.0 / gamma / taupi);
+          if(taupi0>0.5*dt){// or waht the condition should be?
+              c->setpiH0(i, j, c->getpi(i, j) -
+                         (c->getpi(i, j) - piNS[i][j]) * dt / 2.0 / gamma / taupi0);
+              c->setpiH0(i, j, (c->getpi_bck(i, j) - piNS0[i][j]) * dt / 2.0 / gamma / (taupi0 * taupi0) * delta_taupi);
+          }
       else
        c->setpiH0(i, j, piNS[i][j]);
 #endif
       }
 #ifdef FORMAL_SOLUTION
-     c->setPiH0((c->getPi() - PiNS) * exp(-dt / 2.0 / gamma / tauPi) + PiNS);
+     c->setPiH0((c->getPi() - PiNS) * exp(-dt / 2.0 / gamma / tauPi0) + PiNS);
+     c->setPiH0( (c->getPi_bck() - PiNS0) * dt / 2.0 / gamma / (tauPi0 * tauPi0) * delta_tauPi );
 #else
-    if(tauPi>0.5*dt)
-     c->setPiH0(c->getPi() - (c->getPi() - PiNS) * dt / 2.0 / gamma / tauPi);
+        if(tauPi0>0.5*dt){
+            c->setPiH0(c->getPi() - (c->getPi() - PiNS) * dt / 2.0 / gamma / tauPi0);
+            c->setPiH0( (c->getPi_bck() - PiNS0) * dt / 2.0 / gamma / (tauPi0 * tauPi0) * delta_tauPi );
+        }
     else
      c->setPiH0(PiNS);
 #endif
@@ -1055,23 +1076,21 @@ void Hydro::ISformal() {
           c->addpiH0(i, j, lambdapiPi * ( c->getPi() * sigNS0[i][j] + c->getPi_bck() * sigNS[i][j] ) / gamma * 0.5 * dt);
        for (int k = 0; k < 4; k++) {
 //         parts of terms with one internal summation index
-        c->addpiH0(i, j, phi7 * ( c->getpi_bck(i, k) * c->getpi(j, k) + c->getpi(i, k) * c->getpi_bck(j, k) ) * gmumu[k] / gamma * 0.5 * dt ); // first part of phi7
+        c->addpiH0(i, j, phi70 * ( c->getpi_bck(i, k) * c->getpi(j, k) + c->getpi(i, k) * c->getpi_bck(j, k) ) * gmumu[k] / gamma * 0.5 * dt ); // first part of phi7
         c->addpiH0(i, j, taupipi * 0.5 * ( c->getpi_bck(i, k) * sigNS[j][k] + c->getpi(i, k) * sigNS0[j][k] + c->getpi_bck(j, k) * sigNS[i][k] + c->getpi(j, k) * sigNS0[i][k] ) * gmumu[k] / gamma * 0.5 * dt ); // first part of taupipi
-
-//           - taupipi * 0.5 * (c->getpi(i,k) * sigNS[j][k] * gmumu[k] + c->getpi(j,k) * sigNS[i][k] * gmumu[k])) / gamma * 0.5 * dt);
            c->addpiH0(i,j, - u[k] * dpi0[i][j][k] / gamma * 0.5 * dt );
+           c->addpiH0(i, j, delta_phi7 * c->getpi_bck(i,k) * c->getpi_bck(j,k) * gmumu[k] / gamma * 0.5 * dt);
 //         parts of terms with two internal summation indexes
         for (int l = 0; l < 4; l++){
             c->addpiH0(i, j, - (c->getpi(i, k) * u0[j] + c->getpi(j, k) * u0[i]) * u0[l] * dmu0[l][k] * gmumu[k] / gamma * 0.5 * dt
                              - (c->getpi_bck(i, k) * u0[j] + c->getpi_bck(j, k) * u0[i]) * u0[l] * dmu[l][k] * gmumu[k] / gamma * 0.5 * dt
-                             - u[k] * (u0[j] * u0[l] * dpi0[k][i][l] + u0[i] * u0[l] * dpi0[k][j][l]) * gmumu[k] / gamma * 0.5 * dt //?????????????ten faktor?
-                             - (u0[j] * c->getpi_bck(i, k) + u0[i] * c->getpi_bck(j, k)) * u[l] * dmu0[l][k] * gmumu[k] / gamma * 0.5 * dt
-                       );
-            c->addpiH0(i, j, phi7 * ( ( c->getpi_bck(i, l) * u0[j] + c->getpi_bck(j, l) * u0[i] ) * u0[k] * c->getpi(k, l)
+                             - u[k] * (u0[j] * u0[l] * dpi0[k][i][l] + u0[i] * u0[l] * dpi0[k][j][l]) * gmumu[k] / gamma * 0.5 * dt
+                             - (u0[j] * c->getpi_bck(i, k) + u0[i] * c->getpi_bck(j, k)) * u[l] * dmu0[l][k] * gmumu[k] / gamma * 0.5 * dt );
+            c->addpiH0(i, j, phi70 * ( ( c->getpi_bck(i, l) * u0[j] + c->getpi_bck(j, l) * u0[i] ) * u0[k] * c->getpi(k, l)
                                       - 2./3. * Delta[index44(i,j)] * (c->getpi_bck(k, l) * c->getpi(k, l) ) ) * gmumu[k] * gmumu[l] / gamma * 0.5 * dt ); // second part of phi7
-            c->addpiH0(i, j, phi7 * ( - ( u0[j] * c->getpi_bck(i, l) + u0[i] * c->getpi_bck(j, l) ) * u[k] * c->getpi_bck(k, l)
+            c->addpiH0(i, j, phi70 * ( - ( u0[j] * c->getpi_bck(i, l) + u0[i] * c->getpi_bck(j, l) ) * u[k] * c->getpi_bck(k, l)
                                       + 1./3 * ( u[i] * u0[j] + u0[i] * u[j] ) * c->getpi_bck(k, l) * c->getpi_bck(k, l) ) * gmumu[k] * gmumu[l] / gamma * 0.5 * dt ); // delta part of brackets for phi7
-            
+
             c->addpiH0(i, j, taupipi * ( 0.5 * ( c->getpi_bck(i, l) * u0[j] + c->getpi_bck(j, l) * u0[i] ) * u0[k] * sigNS[k][l]
                                        + 0.5 * ( sigNS0[j][l] * u0[i] + sigNS0[i][l] * u0[j] ) * u0[k] * c->getpi(k, l)
                                        - 1./3. * Delta[index44(i,j)] * (c->getpi_bck(k, l) * sigNS[k][l] + c->getpi(k, l) * sigNS0[k][l] ) ) * gmumu[k] * gmumu[l] / gamma * 0.5 * dt ); // second part of taupipi
@@ -1080,13 +1099,12 @@ void Hydro::ISformal() {
                                          + 1./3 * ( u[i] * u0[j] + u0[i] * u[j] ) * c->getpi_bck(k, l) * sigNS0[k][l] ) * gmumu[k] * gmumu[l] / gamma * 0.5 * dt ); // delta part of brackets for taupipi
             
             c->addPiH0(lamPipi * (c->getpi(k, l) * sigNS0[k][l] + c->getpi_bck(k, l) * sigNS[k][l] ) / gamma * 0.5 * dt);
-            for (int r = 0; r < 4; r++) {
+            for (int r = 0; r < 4; r++) {//3 summation indeces
                 c->addpiH0(i, j, 2./3 * (gmunu[i][j] + 2 * u0[i] * u0[j]) * u0[k] * c->getpi(k, r) * u0[l] * dmu0[l][r] * gmumu[k] * gmumu[r] / gamma * 0.5 * dt );//?????????????????????
                 c->addpiH0(i, j, ( 1./2 * ( ( u[j] * u0[r] + u0[j] * u[r] ) * ( gmunu[i][k] + u0[i] * u0[k] ) + ( u[i] * u0[k] + u0[i] * u[k] ) * ( gmunu[j][r] + u0[j] * u0[r] ) )
                                  + 1./2 * ( ( u[i] * u0[r] + u0[i] * u[r] ) * ( gmunu[j][k] + u0[j] * u0[k] ) + ( u[j] * u0[k] + u0[j] * u[k] ) * ( gmunu[i][r] + u0[i] * u0[r] ) )
                                  - 1./3 * ( ( u[k] * u0[r] + u0[k] * u[r] ) * ( gmunu[i][j] + u0[i] * u0[j] ) + ( u[i] * u0[j] + u0[i] * u[j] ) * ( gmunu[k][r] + u0[k] * u0[r] ) )
-                                 ) * u0[l] * dpi0[k][r][l] * gmumu[k] * gmumu[r] / gamma * 0.5 * dt
-                          );
+                                 ) * u0[l] * dpi0[k][r][l] * gmumu[k] * gmumu[r] / gamma * 0.5 * dt );
             }
         }
        }
@@ -1107,12 +1125,16 @@ void Hydro::ISformal() {
       for (int j = 0; j <= i; j++) {
 #ifdef FORMAL_SOLUTION
        c->setpi0(i, j,
-                 (c->getpi(i, j) - piNS[i][j]) * exp(-dt / gamma / taupi) +
+                 (c->getpi(i, j) - piNS[i][j]) * exp(-dt / gamma / taupi0) +
                      piNS[i][j]);
+       c->setpi0(i, j, (c->getpiH0_bck(i, j) - piNS0[i][j]) * dt / gamma / (taupi0*taupi0) * delta_taupi );//H0????????????????????,
+
 #else
-      if(taupi>0.5*dt)
-       c->setpi0(i, j, c->getpi(i, j) -
-          (c->getpiH0(i, j) - piNS[i][j]) * dt / gamma / taupi);
+      if(taupi0>0.5*dt){
+              c->setpi0(i, j, c->getpi(i, j) -
+                        (c->getpiH0(i, j) - piNS[i][j]) * dt / gamma / taupi0);
+              c->setpi0(i, j, (c->getpiH0_bck(i, j) - piNS0[i][j]) * dt / gamma / (taupi0*taupi0) * delta_taupi );
+          }
       else
        c->setpi0(i, j, piNS[i][j]);
 #endif
@@ -1120,10 +1142,13 @@ void Hydro::ISformal() {
       }
         
 #ifdef FORMAL_SOLUTION
-     c->setPi0((c->getPi() - PiNS) * exp(-dt / gamma / tauPi) + PiNS);
+     c->setPi0((c->getPi() - PiNS) * exp(-dt / gamma / tauPi0) + PiNS);
+     c->setPi0( (c->getPiH0_bck() - PiNS0) * dt / gamma / (tauPi0 * tauPi0) * delta_tauPi );
 #else
-    if(tauPi>0.5*dt)
-     c->setPi0(c->getPi() - (c->getPiH0() - PiNS) * dt / gamma / tauPi);
+        if(tauPi0>0.5*dt){
+            c->setPi0(c->getPi() - (c->getPiH0() - PiNS) * dt / gamma / tauPi0);
+            c->setPi0( (c->getPiH0_bck() - PiNS0) * dt / gamma / (tauPi0 * tauPi0) * delta_tauPi );
+        }
     else
      c->setPi0(PiNS);
 #endif
@@ -1147,28 +1172,31 @@ void Hydro::ISformal() {
              c->addpi0(i, j, lambdapiPi * ( c->getPiH0() * sigNS0[i][j] + c->getPiH0_bck() * sigNS[i][j] ) / gamma * dt);
           for (int k = 0; k < 4; k++) {
     //         parts of terms with one internal summation index
-           c->addpi0(i, j, phi7 * ( c->getpiH0_bck(i, k) * c->getpiH0(j, k) + c->getpiH0(i, k) * c->getpiH0_bck(j, k) ) * gmumu[k] / gamma * dt ); // first part of phi7
-           c->addpi0(i, j, taupipi * 0.5 * ( c->getpiH0_bck(i, k) * sigNS[j][k] + c->getpiH0(i, k) * sigNS0[j][k] + c->getpiH0_bck(j, k) * sigNS[i][k] + c->getpiH0(j, k) * sigNS0[i][k] ) * gmumu[k] / gamma * dt ); // first part of taupipi
-
-              c->addpiH0(i,j, - u[k] * dpi0H[i][j][k] / gamma * dt );
+              c->addpi0(i, j, phi70 * ( c->getpiH0_bck(i, k) * c->getpiH0(j, k) + c->getpiH0(i, k) * c->getpiH0_bck(j, k) ) * gmumu[k] / gamma * dt ); // first part of phi7
+              c->addpi0(i, j, taupipi * 0.5 * ( c->getpiH0_bck(i, k) * sigNS[j][k] + c->getpiH0(i, k) * sigNS0[j][k] + c->getpiH0_bck(j, k) * sigNS[i][k] + c->getpiH0(j, k) * sigNS0[i][k] ) * gmumu[k] / gamma * dt ); // first part of taupipi
+              c->addpi0(i, j, - u[k] * dpi0H[i][j][k] / gamma * dt );
+              
+              c->addpi0(i, j, delta_phi7 * c->getpiH0_bck(i,k) * c->getpiH0_bck(j,k) * gmumu[k] / gamma * dt);
+              
     //         parts of terms with two internal summation indexes
            for (int l = 0; l < 4; l++){
                c->addpi0(i, j, - (c->getpiH0(i, k) * u0[j] + c->getpiH0(j, k) * u0[i]) * u0[l] * dmu0[l][k] * gmumu[k] / gamma * dt
                             - (c->getpiH0_bck(i, k) * u0[j] + c->getpiH0_bck(j, k) * u0[i]) * u0[l] * dmu[l][k] * gmumu[k] / gamma * dt
                             - u[k] * (u0[j] * u0[l] * dpi0H[k][i][l] + u0[i] * u0[l] * dpi0H[k][j][l]) * gmumu[k] / gamma * dt //?????????????ten faktor?
-                            - (u0[j] * c->getpiH0_bck(i, k) + u0[i] * c->getpiH0_bck(j, k)) * u[l] * dmu0[l][k] * gmumu[k] / gamma * dt
-                        );
-               c->addpi0(i, j, phi7 * ( ( c->getpiH0_bck(i, l) * u0[j] + c->getpiH0_bck(j, l) * u0[i] ) * u0[k] * c->getpiH0(k, l)
+                            - (u0[j] * c->getpiH0_bck(i, k) + u0[i] * c->getpiH0_bck(j, k)) * u[l] * dmu0[l][k] * gmumu[k] / gamma * dt );
+               c->addpi0(i, j, phi70 * ( ( c->getpiH0_bck(i, l) * u0[j] + c->getpiH0_bck(j, l) * u0[i] ) * u0[k] * c->getpiH0(k, l)
                                         - 2./3. * Delta[index44(i,j)] * (c->getpiH0_bck(k, l) * c->getpiH0(k, l) ) ) * gmumu[k] * gmumu[l] / gamma * dt ); // second part of phi7
-               c->addpi0(i, j, phi7 * ( - ( u0[j] * c->getpiH0_bck(i, l) + u0[i] * c->getpiH0_bck(j, l) ) * u[k] * c->getpiH0_bck(k, l)
+               c->addpi0(i, j, phi70 * ( - ( u0[j] * c->getpiH0_bck(i, l) + u0[i] * c->getpiH0_bck(j, l) ) * u[k] * c->getpiH0_bck(k, l)
                                         + 1./3 * ( u[i] * u0[j] + u0[i] * u[j] ) * c->getpiH0_bck(k, l) * c->getpiH0_bck(k, l) ) * gmumu[k] * gmumu[l] / gamma * dt ); // delta part of brackets for phi7
-               
+
                c->addpi0(i, j, taupipi * ( 0.5 * ( c->getpiH0_bck(i, l) * u0[j] + c->getpiH0_bck(j, l) * u0[i] ) * u0[k] * sigNS[k][l]
                                         + 0.5 * ( sigNS0[j][l] * u0[i] + sigNS0[i][l] * u0[j] ) * u0[k] * c->getpiH0(k, l)
                                         - 1./3. * Delta[index44(i,j)] * (c->getpiH0_bck(k, l) * sigNS[k][l] + c->getpiH0(k, l) * sigNS0[k][l] ) ) * gmumu[k] * gmumu[l] / gamma * dt ); // second part of taupipi
                c->addpi0(i, j, taupipi * ( - 0.5 * ( u0[j] * c->getpiH0_bck(i, l) + u0[i] * c->getpiH0_bck(j, l) ) * u[k] * sigNS0[k][l]
                                         - 0.5 * ( u0[i] * sigNS0[j][l] + u0[j] * sigNS0[i][l] ) * u[k] * c->getpiH0_bck(k, l)
                                         + 1./3 * ( u[i] * u0[j] + u0[i] * u[j] ) * c->getpiH0_bck(k, l) * sigNS0[k][l] ) * gmumu[k] * gmumu[l] / gamma * dt ); // delta part of brackets for taupipi
+
+               c->addpi0(i, j, - 1. / 3. * Delta[index44(i,j)] * c->getpiH0_bck(k, l) * delta_phi7 * c->getpiH0_bck(k, l) / gamma * 0.5 * dt);
                
                c->addPi0(lamPipi * (c->getpiH0(k, l) * sigNS0[k][l] + c->getpiH0_bck(k, l) * sigNS[k][l] ) / gamma * dt);
                for (int r = 0; r < 4; r++) {
@@ -1176,8 +1204,7 @@ void Hydro::ISformal() {
                    c->addpi0(i, j, ( 1./2 * ( ( u[j] * u0[r] + u0[j] * u[r] ) * ( gmunu[i][k] + u0[i] * u0[k] ) + ( u[i] * u0[k] + u0[i] * u[k] ) * ( gmunu[j][r] + u0[j] * u0[r] ) )
                                 + 1./2 * ( ( u[i] * u0[r] + u0[i] * u[r] ) * ( gmunu[j][k] + u0[j] * u0[k] ) + ( u[j] * u0[k] + u0[j] * u[k] ) * ( gmunu[i][r] + u0[i] * u0[r] ) )
                                 - 1./3 * ( ( u[k] * u0[r] + u0[k] * u[r] ) * ( gmunu[i][j] + u0[i] * u0[j] ) + ( u[i] * u0[j] + u0[i] * u[j] ) * ( gmunu[k][r] + u0[k] * u0[r] ) )
-                                ) * u0[l] * dpi0H[k][r][l] * gmumu[k] * gmumu[r] / gamma * dt
-                            );
+                                ) * u0[l] * dpi0H[k][r][l] * gmumu[k] * gmumu[r] / gamma * dt );
                }
            }
           }
@@ -1373,7 +1400,7 @@ void Hydro::visc_flux(Cell *left, Cell *right, int direction, double ix, double 
      flux[ind1] += -0.5 * (left->getPiH() + right->getPiH()) *
      gmumu[ind1];  // gmunu is diagonal
  }
- flux[ind1] += 0.5 * (left->getPiH() + right->getPiH()) * uuu0[ind1] * uuu0[ind2]
+     flux[ind1] += 0.5 * (left->getPiH() + right->getPiH()) * uuu0[ind1] * uuu0[ind2]
              + 0.5 * (left->getPiH_bck() + right->getPiH_bck()) * ( uuu0[ind1] * uuu[ind2] + uuu[ind1] * uuu0[ind2] );
  }
  for (int i = 0; i < 4; i++) flux[i] = flux[i] * tauMinusHalf * dt / dxa;
@@ -1412,15 +1439,15 @@ void Hydro::performStep(void) {
 //        eos->eos(e, 0., 0., 0., T, mub, mus, muq, p);
         
         if(ix<=40){
-            cout.precision(10);
+            cout.precision(14);
         }
         else{
-            cout.precision(10);
+            cout.precision(15);
         }
         
 //                      if(ix==20 || ix ==19 || ix ==21 || ix ==60 || ix ==61 || ix ==59){
 //        if(ix==39 || ix== 40 || ix==41){
-        if(ix==60){
+        if(ix==40){
 //                  cout << vx+vx__0 << "   " << f->getX(ix) << "      " << e+e__0 << "       " << p+p__0 << "     " << cs << endl;
 //                  cout << vx << "   " << vy << "    " << vz << "   " << f->getX(ix) << "      " << e+e__0 << "       " << p+p__0 << "     " << cs << endl;
                   cout << vx << "   " << f->getX(ix) << "      " << e+e__0 << "       " << p+p__0 << "     " << cs << endl;
