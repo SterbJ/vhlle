@@ -20,7 +20,7 @@ double EoS::s(double e, double nb, double nq, double ns) {
  double T, mub, muq, mus, p;
  eos(e, nb, nq, ns, T, mub, muq, mus, p);
  if (T > 0.0)
-  return (e + p - mub * nb - muq * nq - mus * ns) / T;
+  return (e + p - mub * nb - muq * nq - mus * ns) / T; // should not this be linearized as well?
  else
   return 0.;
 }

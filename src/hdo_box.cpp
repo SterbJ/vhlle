@@ -90,8 +90,6 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix) 
  double Ftl = 0., Fxl = 0., Fyl = 0., Fzl = 0., Fbl = 0., Fql = 0., Fsl = 0.,
         Ftr = 0., Fxr = 0., Fyr = 0., Fzr = 0., Fbr = 0., Fqr = 0., Fsr = 0.;
  double U1l, U2l, U3l, U4l, Ubl, Uql, Usl, U1r, U2r, U3r, U4r, Ubr, Uqr, Usr;
- double v0_L, v0_R, delta_vL, delta_vR, cs;
- double br_const, bl_const, P, Q, C, B;
  double flux[7];
  const double dta = mode == 0 ? dt / 2. : dt;
  double tauFactor = 1.0;  // fluxes are also multiplied by tau, 1 for Cartesian
@@ -108,9 +106,6 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix) 
                            direction);
   right->getPrimVarLeft(eos, tau, er, pr, nbr, nqr, nsr, vxr, vyr, vzr,
                         direction, er_0, pr_0, nbr_0, nqr_0, nsr_0, vxr_0, vyr_0, vzr_0);
-     
-//     cout << pr_0 << endl;
-
 
      El = (el_0 + pl_0) / (1 - vxl_0 * vxl_0 - vyl_0 * vyl_0 - vzl_0 * vzl_0);
      Er = (er_0 + pr_0) / (1 - vxr_0 * vxr_0 - vyr_0 * vyr_0 - vzr_0 * vzr_0);
@@ -208,13 +203,13 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix) 
     U4r = (er + pr) * gammar_const * gammar_const - pr;
 
 
- Ubl = gammal_const * nbl;
- Uql = gammal_const * nql;
- Usl = gammal_const * nsl;
+ Ubl = gammal_const * nbl; // not linearized
+ Uql = gammal_const * nql; // not linearized
+ Usl = gammal_const * nsl; // not linearized
 
- Ubr = gammar_const * nbr;
- Uqr = gammar_const * nqr;
- Usr = gammar_const * nsr;
+ Ubr = gammar_const * nbr; // not linearized
+ Uqr = gammar_const * nqr; // not linearized
+ Usr = gammar_const * nsr; // not linearized
 
  if (direction == X_) {
      
@@ -228,13 +223,13 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix) 
      Fyr = (er0 + pr0) * (gammar_const * vyr0 * gammar_const * vxr + gammar_const * vxr0 * gammar_const * vyr) + (er + pr) * gammar_const * vyr0 * gammar_const * vxr0;
      Fzr = (er0 + pr0) * (gammar_const * vzr0 * gammar_const * vxr + gammar_const * vxr0 * gammar_const * vzr) + (er + pr) * gammar_const * vzr0 * gammar_const * vxr0;
      
-  Fbl = Ubl * vxl;
-  Fql = Uql * vxl;
-  Fsl = Usl * vxl;
+  Fbl = Ubl * vxl; // not linearized
+  Fql = Uql * vxl; // not linearized
+  Fsl = Usl * vxl; // not linearized
 
-  Fbr = Ubr * vxr;
-  Fqr = Uqr * vxr;
-  Fsr = Usr * vxr;
+  Fbr = Ubr * vxr; // not linearized
+  Fqr = Uqr * vxr; // not linearized
+  Fsr = Usr * vxr; // not linearized
 
   // for the case of constant c_s only
   csb = sqrt(eos->cs2() +
@@ -245,7 +240,6 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix) 
                       (vxl0 - eos->cs()) / (1 - vxl0 * eos->cs())));
   br = max(0., max((vb + csb) / (1 + vb * csb),
                       (vxr0 + eos->cs()) / (1 + vxr0 * eos->cs())));
-
 
   dx = f->getDx();
 
@@ -265,13 +259,13 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix) 
      Fyr = (er0 + pr0) * (gammar_const * vyr0 * gammar_const * vyr + gammar_const * vyr0 * gammar_const * vyr) + (el + pr) * gammar_const * vyr0 * gammar_const * vyr0 + pr;
      Fzr = (er0 + pr0) * (gammar_const * vzr0 * gammar_const * vyr + gammar_const * vyr0 * gammar_const * vzr) + (el + pr) * gammar_const * vzr0 * gammar_const * vyr0;
      
-  Fbl = Ubl * vyl;
-  Fql = Uql * vyl;
-  Fsl = Usl * vyl;
+  Fbl = Ubl * vyl; // not linearized
+  Fql = Uql * vyl; // not linearized
+  Fsl = Usl * vyl; // not linearized
 
-  Fbr = Ubr * vyr;
-  Fqr = Uqr * vyr;
-  Fsr = Usr * vyr;
+  Fbr = Ubr * vyr; // not linearized
+  Fqr = Uqr * vyr; // not linearized
+  Fsr = Usr * vyr; // not linearized
 
   // for the case of constant c_s only
   csb = sqrt(eos->cs2() +
@@ -282,7 +276,6 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix) 
                    (vyl_0 - eos->cs()) / (1 - vyl_0 * eos->cs())));
   br = max(0., max((vb + csb) / (1 + vb * csb),
                    (vyr_0 + eos->cs()) / (1 + vyr_0 * eos->cs())));
-
 
   dx = f->getDy();
 
@@ -303,13 +296,13 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix) 
      Fyr = (er0 + pr0) * (gammar_const * vyr0 * gammar_const * vzr + gammar_const * vzr0 * gammar_const * vyr) / tau1 + (er + pr) * gammar_const * vyr0 * gammar_const * vzr0 / tau1;
      Fzr = (er0 + pr0) * (gammar_const * vzr0 * gammar_const * vzr + gammar_const * vzr0 * gammar_const * vzr) / tau1 + (er + pr) * gammar_const * vzr0 * gammar_const * vzr0 / tau1 + pr / tau1;
      
-  Fbl = Ubl * vzl / tau1;
-  Fql = Uql * vzl / tau1;
-  Fsl = Usl * vzl / tau1;
+  Fbl = Ubl * vzl / tau1; // not linearized
+  Fql = Uql * vzl / tau1; // not linearized
+  Fsl = Usl * vzl / tau1; // not linearized
 
-  Fbr = Ubr * vzr / tau1;
-  Fqr = Uqr * vzr / tau1;
-  Fsr = Usr * vzr / tau1;
+  Fbr = Ubr * vzr / tau1; // not linearized
+  Fqr = Uqr * vzr / tau1; // not linearized
+  Fsr = Usr * vzr / tau1; // not linearized
 
   // for the case of constant c_s only
   // factor 1/tau accounts for eta-coordinate
@@ -379,6 +372,7 @@ void Hydro::source(double tau1, double x, double y, double z, double Q[7],
  // geometrical source term is zero in Cartesian frame
  for (int i = 0; i < 7; i++) S[i] = 0.0;
  #else
+ // not linearized
  double _Q[7], _Q0[7], e, p, nb, nq, ns, vx, vy, vz;
     for (int i = 0; i < 7; i++){
         _Q[i] = Q[i] / tau1;  // no tau factor in  _Q
@@ -447,18 +441,15 @@ void Hydro::visc_source_step(int ix, int iy, int iz) {
  #ifdef CARTESIAN
   // there is no geometric viscous source term in Cartesian frame
  #else
+  // not linearized
  Cell *c = f->getCell(ix, iy, iz);
     c->getPrimVarHCenterQ0(eos, tau - dt / 2., e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0);
     c->getPrimVarHCenter(eos, tau - dt / 2., e, p, nb, nq, ns, vx, vy, vz, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0);  // TODO Cartesian
  if (e <= 0.) return;
- uuu0[0] = 1. / sqrt(1. - vx_0 * vx_0 - vy_0 * vy_0 - vz_0 * vz_0);
- uuu0[1] = uuu[0] * vx_0;
- uuu0[2] = uuu[0] * vy_0;
- uuu0[3] = uuu[0] * vz_0;
-    uuu[0] = 0;//vx_0 * vx + vy_0 * vy + vz_0 * vz;
-    uuu[1] = uuu0[0] * vx;
-    uuu[2] = uuu0[0] * vy;
-    uuu[3] = uuu0[0] * vz;
+    uuu[0] = 1. / sqrt(1. - vx * vx - vy * vy - vz * vz);
+    uuu[1] = uuu[0] * vx;
+    uuu[2] = uuu[0] * vy;
+    uuu[3] = uuu[0] * vz;
 
  k[T_] = -c->getpiH(3, 3) + c->getPiH() * (-1.0 - uuu[3] * uuu[3]);
  k[X_] = 0.;
@@ -476,15 +467,15 @@ void Hydro::visc_source_step(int ix, int iy, int iz) {
 void Hydro::NSquant(int ix, int iy, int iz, double pi[4][4], double &Pi, double dmu[4][4], double dmu0[4][4], double &du, double &du0) {
     const double VMIN = 1e-2;
     const double UDIFF = 3.0;
-    double e0, e1, p, nb, nq, ns, vx1, vy1, vz1, vx0, vy0, vz0, vxH, vyH, vzH;
-    double e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0, e_01, vx_01, vy_01, vz_01, vx_0H, vy_0H, vz_0H;
+    double e0, e1, p, nb, nq, ns, vx1, vy1, vz1, vx0, vy0, vz0, vxH, vyH, vzH;//fluctuations
+    double e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0, e_01, vx_01, vy_01, vz_01, vx_0H, vy_0H, vz_0H;//background
     double ut0, ux0, uy0, uz0, ut1, ux1, uy1, uz1;//fluctuations
     double ut0_0, ux0_0, uy0_0, uz0_0, ut1_0, ux1_0, uy1_0, uz1_0;//background
     //	double dmu [4][4] ; // \partial_\mu u^\nu matrix
     // coordinates: 0=tau, 1=x, 2=y, 3=eta
-    double Z[4][4][4][4];  // Z[mu][nu][lambda][rho]
-    double Z0[4][4][4][4]; // Z matrix for background
-    double uuu[4];         // the 4-velocity
+    double Z[4][4][4][4];  // Z[mu][nu][lambda][rho] - fluctuating part of Z
+    double Z0[4][4][4][4]; // Z matrix for background - background part of Z
+    double uuu[4];         // fluctuation of the 4-velocity
     double uuu0[4];        // the background 4-velocity
     double gmunu[4][4] = {{1, 0, 0, 0},
         {0, -1, 0, 0},
@@ -505,8 +496,9 @@ void Hydro::NSquant(int ix, int iy, int iz, double pi[4][4], double &Pi, double 
             for (int j = 0; j < 4; j++) {
                 pi[i][j] = 0.;
                 dmu[i][j] = 0.;
+                dmu0[i][j] = 0.;
             }
-        Pi = du = 0.;
+        Pi = du = du0 = 0.;
         return;
     }
     // calculation of \partial_\mu u^\nu matrix
@@ -539,10 +531,9 @@ void Hydro::NSquant(int ix, int iy, int iz, double pi[4][4], double &Pi, double 
     double delta_s; // definition of fluctiation in enthropy
     double s0 = eos->s(e_01, nb, nq, ns);  // background entropy density in the current cell
     double dS = (eos->s(e_01 + h, nb, nq, ns) - s0 ) / h; // derivative of enthropy with respect to the energy density at e_0
-    eos->eos(e_01, nb, nq, ns, T0, mub, muq, mus, p_0);
+    eos->eos(e_01, nb, nq, ns, T0, mub, muq, mus, p_0); // this gives (not just) temperature at the background energy density
     delta_s = dS * e1; // fluctuation in enthropy
-    
-    trcoeff->getEta(e_01, nb, T0, etaS, zetaS);
+    trcoeff->getEta(e_01, nb, T0, etaS, zetaS); // gets etaS, zetaS at background energy density
     //##############
     // if(e1<0.00004) s=0. ; // negative pressure due to pi^zz for small e
     
@@ -760,7 +751,7 @@ void Hydro::NSquant(int ix, int iy, int iz, double pi[4][4], double &Pi, double 
                         Z[mu][nu][lam][rho] -= (uuu[mu] * uuu0[nu] + uuu0[mu] * uuu[nu]) / 3.0;
                 }
     
-        // calculating sigma[mu][nu]
+        // calculating sigma[mu][nu] - pi[mu][nu] respectively
         for (int i = 0; i < 4; i++)
             for (int j = 0; j < 4; j++) {
                 pi[i][j] = 0.0;
@@ -768,13 +759,12 @@ void Hydro::NSquant(int ix, int iy, int iz, double pi[4][4], double &Pi, double 
                     for (int l = 0; l < 4; l++) {
                         pi[i][j] += ( Z0[i][j][k][l] * dmu[k][l] - Z[i][j][k][l] * dmu0[k][l] ) * 2.0 * etaS * s0 / 5.068
                                     + Z0[i][j][k][l] * dmu0[k][l] * 2.0 * etaS * delta_s / 5.068 ;
-
                     }
             }
 
         Pi = -zetaS * s0 * (dmu[0][0] + dmu[1][1] + dmu[2][2] + dmu[3][3]) / 5.068 - zetaS * delta_s * (dmu0[0][0] + dmu0[1][1] + dmu0[2][2] + dmu0[3][3]) / 5.068;  // 5.068 -> fm^{-4} --> GeV/fm^3
-        du = dmu[0][0] + dmu[1][1] + dmu[2][2] + dmu[3][3];
-        du0 = dmu0[0][0] + dmu0[1][1] + dmu0[2][2] + dmu0[3][3];
+        du = dmu[0][0] + dmu[1][1] + dmu[2][2] + dmu[3][3]; // trace of fluctuation
+        du0 = dmu0[0][0] + dmu0[1][1] + dmu0[2][2] + dmu0[3][3]; // trace of background
         //--------- debug part: NaN/inf check, trace check, diag check, transversality
         // check
         for (int i = 0; i < 4; i++)
@@ -786,7 +776,6 @@ void Hydro::NSquant(int ix, int iy, int iz, double pi[4][4], double &Pi, double 
                     exit(1);
                 }
             }
-    
 }
 
 //void Hydro::setNSvalues() {
@@ -822,9 +811,11 @@ void Hydro::NSquant(int ix, int iy, int iz, double pi[4][4], double &Pi, double 
 //}
 
 void Hydro::ISformal() {
- double e, p, nb, nq, ns, vx, vy, vz, T0, mub, muq, mus;
- double e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0;
- double piNS[4][4], piNS0[4][4], sigNS[4][4], sigNS0[4][4], PiNS, PiNS0, dmu[4][4], dmu0[4][4], du, du0, pi[4][4], piH[4][4], Pi, PiH, dpi0[4][4][4], dpi0H[4][4][4];
+ double e, p, nb, nq, ns, vx, vy, vz, mub, muq, mus; //fluctuations
+ double e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0, T0; //background
+ double piNS[4][4], sigNS[4][4], PiNS, dmu[4][4], du, pi[4][4], piH[4][4], Pi, PiH; // fluctuations
+ double piNS0[4][4], sigNS0[4][4], PiNS0, dmu0[4][4], du0, pi_bck[4][4], piH_bck[4][4], Pi_bck, PiH_bck; // background
+ double dpi0[4][4][4], dpi0H[4][4][4]; // derivatives of background pi^munu
  const double gmumu[4] = {1., -1., -1., -1.};
  #ifdef CARTESIAN
  double tauMinusHalf = 1.0;
@@ -858,13 +849,13 @@ void Hydro::ISformal() {
     } else {  // non-empty cell
      // 1) relaxation(pi)+source(pi) terms for half-step
         double gamma = 1.0 / sqrt(1.0 - vx_0 * vx_0 - vy_0 * vy_0 - vz_0 * vz_0);
-        double u0[4];
+        double u0[4];//background velocity
         u0[0] = gamma;
         u0[1] = u0[0] * vx_0;
         u0[2] = u0[0] * vy_0;
         u0[3] = u0[0] * vz_0;
         
-        double u[4];
+        double u[4];//fluctuation of velocity
         u[0] = 0.;
         u[1] = gamma * vx;
         u[2] = gamma * vy;
@@ -879,7 +870,7 @@ void Hydro::ISformal() {
         c->addFlux(flux[0], flux[1], flux[2], flux[3], 0., 0., 0.);
         // now calculating viscous terms in NS limit
         NSquant(ix, iy, iz, piNS, PiNS, dmu, dmu0, du, du0);
-        PiNS0 = 0.;
+        PiNS0 = 0.; // setting the background NS variables 0 here - need to get it from the full hydro code when run together
         for (int i = 0; i < 4; i++)
             for (int j = 0; j <= i; j++) {
                 piNS0[i][j]=0.;
@@ -904,7 +895,7 @@ void Hydro::ISformal() {
      eos->eos(e_0, nb, nq, ns, T0, mub, muq, mus, p_0);
      eos->eos(e+h, nb, nq, ns, T1, mub, muq, mus, p_0);
      double dT = (T1 - T0) / h ; // derivative of temperature wrt energy density
-     double etaS, zetaS; // constant
+     double etaS, zetaS; // constant ratio
      trcoeff->getEta(e_0, nb, T0, etaS, zetaS); // obtains eta and zeta
      const double s0 = eos->s(e_0, nb, nq, ns); // background enthropy
      double dS = (eos->s(e_0 + h, nb, nq, ns) - s0 ) / h; // derivative of enthropy wtr to energy density
@@ -916,9 +907,8 @@ void Hydro::ISformal() {
      // mainly to protect against division by zero in the eta=0 case.
      for(int i=0; i<4; i++)
      for(int j=0; j<4; j++) {
-      sigNS0[i][j] = 0.;
+      sigNS0[i][j] = 0.; // background sigma NS set to zero - need to get from the full code
       sigNS[i][j] = 0.5 * (piNS[i][j] * 5.068 - 2. * delta_eta * sigNS0[i][j] ) / eta0 ;
-//      sigNS0[i][j] = 0.5 * piNS0[i][j] / eta * 5.068;
          if(eta<=0.0){
              sigNS[i][j] = 0.0;
              sigNS0[i][j] = 0.;
@@ -931,14 +921,14 @@ void Hydro::ISformal() {
      double deltapipi, taupipi, lambdapiPi, phi7, phi70, delta_phi7, delPiPi, lamPipi; // coefficients for source terms in relaxation equations
      trcoeff->getOther(e_0, nb, nq, ns, deltapipi, taupipi, lambdapiPi, phi7);
      phi70 = phi7/taupi0;  // dividing by tau_pi here, to avoid NaNs when tau_pi==0
-     delta_phi7 = phi7 / (taupi0 * taupi0) * delta_taupi; // fluctuation in phi7 coeff
-     if(taupi0<0.5*dt)
+     delta_phi7 = phi7 / (taupi0 * taupi0) * delta_taupi; // fluctuation in phi7 coeff - it is the only one which does not include taupi
+     if(taupi0<0.5*dt) // what about this condition?
       deltapipi = taupipi = lambdapiPi = phi7 = 0.0;
      trcoeff->getOtherBulk(e_0, nb, nq, ns, delPiPi, lamPipi);
      if(tauPi0<0.5*dt)
       delPiPi = lamPipi = 0.0;
      //#############
-     double Delta[10];
+     double Delta[10]; // corresponds to background Delta
      // relaxation term, piH,PiH-->half-step
      for (int i = 0; i < 4; i++)
       for (int j = 0; j <= i; j++) {
@@ -1028,7 +1018,7 @@ void Hydro::ISformal() {
       }
      c->addPiH0(-delPiPi * ( c->getPi() * du0 + c->getPi_bck() * du ) / gamma * 0.5 * dt);
         
-     for(int i = 0; i < 4; i++){//calculation of derivative of pi^munu at the halfstep
+     for(int i = 0; i < 4; i++){//calculation of derivative of background pi^munu at the halfstep
          for(int j = 0; j < 4; j++){
              dpi0H[i][j][0] = (f->getCell(ix, iy, iz)->getpiH0_bck(i,j) - f->getCell(ix, iy, iz)->getpiH0_bck_prev(i,j)) / dt;
              dpi0H[i][j][1] = 0.5 * (f->getCell(ix + 1, iy, iz)->getpiH0_bck(i,j) - f->getCell(ix - 1, iy, iz)->getpiH0_bck(i,j)) / dx;
@@ -1114,7 +1104,7 @@ void Hydro::ISformal() {
                c->addpi0(i, j, - 1. / 3. * Delta[index44(i,j)] * c->getpiH0_bck(k, l) * delta_phi7 * c->getpiH0_bck(k, l) / gamma * 0.5 * dt);
                c->addPi0(lamPipi * (c->getpiH0(k, l) * sigNS0[k][l] + c->getpiH0_bck(k, l) * sigNS[k][l] ) / gamma * dt);
                
-               for (int r = 0; r < 4; r++) {
+               for (int r = 0; r < 4; r++) {//3 internal indices
                    c->addpi0(i, j, 2./3 * (gmunu[i][j] + 2 * u0[i] * u0[j]) * u0[k] * c->getpiH0(k, r) * u0[l] * dmu0[l][r] * gmumu[k] * gmumu[r] / gamma * dt );//?????????????????????
                    c->addpi0(i, j, ( 1./2 * ( ( u[j] * u0[r] + u0[j] * u[r] ) * ( gmunu[i][k] + u0[i] * u0[k] ) + ( u[i] * u0[k] + u0[i] * u[k] ) * ( gmunu[j][r] + u0[j] * u0[r] ) )
                                 + 1./2 * ( ( u[i] * u0[r] + u0[i] * u[r] ) * ( gmunu[j][k] + u0[j] * u0[k] ) + ( u[j] * u0[k] + u0[j] * u[k] ) * ( gmunu[i][r] + u0[i] * u0[r] ) )
@@ -1156,8 +1146,9 @@ void Hydro::ISformal() {
     for (int i = 0; i < 4; i++)
      for (int j = 0; j < 4; j++) {
       pi[i][j] = piH[i][j] = 0.0;
+      pi_bck[i][j] = piH_bck[i][j] = 0.0;
      }
-    Pi = PiH = 0.0;
+    Pi = PiH = Pi_bck = PiH_bck = 0.0;
     for (int jx = 0; jx < 2; jx++)
      for (int jy = 0; jy < 2; jy++)
       for (int jz = 0; jz < 2; jz++) {
@@ -1189,7 +1180,7 @@ void Hydro::ISformal() {
     double maxpi = 0.;
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++){
-            if (fabs(pi_bck[i][j]) > maxpi) maxpi = fabs(pi_bck[i][j]);
+            if (fabs(pi_bck[i][j]) > maxpi) maxpi = fabs(pi_bck[i][j]); // this is always 0 ... need to change
         }
     bool rescaled = false;
     if (maxT0 / maxpi < 1.0) { // I am not sure how this rescaling should work - condition is made according to the background but the fluctuation is rescaled - probably needs a modification
@@ -1280,10 +1271,10 @@ void Hydro::visc_flux(Cell *left, Cell *right, int direction, double ix, double 
  vyl_0 = 0.5 * (vyl_0 + vyr_0);
  vzl_0 = 0.5 * (vzl_0 + vzr_0);
     
- double v0 = sqrt(vxl_0 * vxl_0 + vyl_0 * vyl_0 + vzl_0 * vzl_0);
- double v = sqrt(vxl_0 * vxl_0 + vyl_0 * vyl_0 + vzl_0 * vzl_0 + 2 * vxl_0 * vxl + 2 * vxl_0 * vxl + 2 * vxl_0 * vxl);
+ double v0 = sqrt(vxl_0 * vxl_0 + vyl_0 * vyl_0 + vzl_0 * vzl_0);//background norm
+ double v = sqrt(vxl_0 * vxl_0 + vyl_0 * vyl_0 + vzl_0 * vzl_0 + 2 * vxl_0 * vxl + 2 * vxl_0 * vxl + 2 * vxl_0 * vxl);//linearized full norm
 // if (v > 1.) {
-//     vxl = 0.99 * vxl / v; How tho define this velocity rescaling???
+//     vxl = 0.99 * vxl / v; How to define this velocity rescaling???
 //     vyl = 0.99 * vyl / v;
 //     vzl = 0.99 * vzl / v;
 // }
@@ -1320,7 +1311,7 @@ void Hydro::performStep(void) {
 
  tau_z = dt / 2. / log(1 + dt / 2. / tau);
 
-//    // vypis profilu energie
+//  Some stuff to print out the values
     for (int ix = 0; ix < f->getNX(); ix++) {
 //     for (int iy = 0; iy < f->getNY(); iy++){
         
@@ -1338,7 +1329,6 @@ void Hydro::performStep(void) {
         c -> getPrimVar(eos, tau, e, p, nb, nq, ns, vx, vy, vz, e__0, p__0, nb__0, nq__0, ns__0, vx__0, vy__0, vz__0);
 
         cs = eos->cs();
-//        eos->eos(e, 0., 0., 0., T, mub, mus, muq, p);
         
         if(ix<=40){
             cout.precision(14);
@@ -1347,32 +1337,24 @@ void Hydro::performStep(void) {
             cout.precision(15);
         }
         
-//                      if(ix==20 || ix ==19 || ix ==21 || ix ==60 || ix ==61 || ix ==59){
+//        if(ix==20 || ix ==19 || ix ==21 || ix ==60 || ix ==61 || ix ==59){
 //        if(ix==39 || ix== 40 || ix==41){
         if(ix==40){
-//                  cout << vx+vx__0 << "   " << f->getX(ix) << "      " << e+e__0 << "       " << p+p__0 << "     " << cs << endl;
-//                  cout << vx << "   " << vy << "    " << vz << "   " << f->getX(ix) << "      " << e+e__0 << "       " << p+p__0 << "     " << cs << endl;
-                  cout << vx << "   " << f->getX(ix) << "      " << e+e__0 << "       " << p+p__0 << "     " << cs << endl;
-
-
-              }
-
-          
-//              if(ix==0){
+//                      cout << vx+vx__0 << "   " << f->getX(ix) << "      " << e+e__0 << "       " << p+p__0 << "     " << cs << endl;
+//                      cout << vx << "   " << vy << "    " << vz << "   " << f->getX(ix) << "      " << e+e__0 << "       " << p+p__0 << "     " << cs << endl;
+                    cout << vx << "   " << f->getX(ix) << "      " << e+e__0 << "       " << p+p__0 << "     " << cs << endl;
+        }
+//          if(ix==0){
 //                  cout << vx << "     " << p << "    " << ix << "    " << f->getX(ix) << "      " << e << "       " << cs << "     " << T << endl;
-//          if(ix<40){
-//              cout << f->getX(ix) << "      " << e - 1. << endl;
-//          }
-//          else{
-//              cout << f->getX(ix) << "      " << e - 1. << endl;
-//          }
+//              if(ix<40){
+//                      cout << f->getX(ix) << "      " << e - 1. << endl;
+//              }
+//              else{
+//                      cout << f->getX(ix) << "      " << e - 1. << endl;
 //              }
 //          }
-      }
-    
-    //cout << "E =        " << e_const;//*(f->getNY())*(f->getNX())*(f->getNZ()) << endl;
-   //cout << 1. / sqrt(1 - vx_const * vx_const - vy_const * vy_const - vz_const * vz_const) << endl;
-   // cout << "TADY:     " << vxH_const << "      " << vxPrev_const << endl;
+//      }
+    }
     
  //-----PREDICTOR-ideal
  for (int iy = 0; iy < f->getNY(); iy++)

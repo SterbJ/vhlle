@@ -26,8 +26,8 @@ private:
  // auxiliary particle arrays
  double X[NP], Y[NP], W[NP];
  int C[NP];
- double e0 = 1.;
- double p0 = 1./3;
+ double e0 = 1.; // background energy density
+ double p0 = 1./3; // background pressure
     
 
  double tau0;
@@ -35,25 +35,6 @@ private:
  int nsmoothy;
  int nsmoothz;
  void makeSmoothTable(int npart);
-    
-    double calculateSin(double x) {
-     // This function calculates the sine of a given angle using the provided expansion formula.
-
-    // Initialize variables
-    double sinValue = 0.0;
-    double term = x;
-    double precision = 0.000001;
-    int n = 1;
-    
-    // Calculate the sine value using the expansion formula
-    while (std::abs(term) >= precision) {
-        sinValue += term;
-        term = -term * x * x / ((2 * n) * (2 * n + 1));
-        n++;
-    }
-    
-    return 1. + 0.01*sinValue;
-}
 
 public:
  IcBox(Fluid *f, const char *filename, double tau0, const char* setup);

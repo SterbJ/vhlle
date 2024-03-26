@@ -58,9 +58,9 @@ public:
  double time() { return t; }
  #endif
     
-    int sgn(double v) {
-      if (v < 0) return -1;
-      if (v == 0) return 0;
-      if (v > 0) return 1;
-    }
+ int sgn(double v) {
+  if (v < 0) return -1;
+  if (v == 0) return 0;
+  if (v > 0) return 1;
+ }
 };

@@ -42,16 +42,15 @@ private:
                           // half-step updated (piH)
  double Pi, PiH;  // Pi, WITHOUT tau factor, final (Pi) and half-step updated (PiH)
  double pi0[10], piH0[10];  // // pi^{mu nu}, WITHOUT tau factor, auxiliary
- double pi_bck[10]={0,0,0,0,0,0,0,0,0,0}, piH_bck[10]={0,0,0,0,0,0,0,0,0,0};  // background
- double pi0_bck[10]={0,0,0,0,0,0,0,0,0,0}, piH0_bck[10]={0,0,0,0,0,0,0,0,0,0};  // background prev
- double pi_bck_prev[10]={0,0,0,0,0,0,0,0,0,0}, piH_bck_prev[10]={0,0,0,0,0,0,0,0,0,0};  // background prev
- double pi0_bck_prev[10]={0,0,0,0,0,0,0,0,0,0}, piH0_bck_prev[10]={0,0,0,0,0,0,0,0,0,0};  // background prev
-
+ double pi_bck[10], piH_bck[10];  // background pi^munu
+ double pi0_bck[10], piH0_bck[10];  // background pi^munu without tau factor
+ double pi_bck_prev[10], piH_bck_prev[10];  // background pi^munu at (half)previous step
+ double pi0_bck_prev[10], piH0_bck_prev[10];  // background pi^munu at previous step withou tau factor
  double Pi0, PiH0;          // viscous, WITHOUT tau factor, auxiliary
- double Pi_bck=0, PiH_bck=0;          // background
- double Pi0_bck=0, PiH0_bck=0;          // background
- double Pi_bck_prev=0, PiH_bck_prev=0;          // background prev
- double Pi0_bck_prev=0, PiH0_bck_prev=0;          // background prev
+ double Pi_bck, PiH_bck;          // background
+ double Pi0_bck, PiH0_bck;          // background
+ double Pi_bck_prev, PiH_bck_prev;          // background prev
+ double Pi0_bck_prev, PiH0_bck_prev;          // background prev
  double flux[7];            // cumulative fluxes
  Cell *next[3];             // pointer to the next cell in a given direction
  Cell *prev[3];             // pointer to the previous cell in a given direction
@@ -75,13 +74,13 @@ public:
  inline int getY(void) { return iy; }
  inline int getZ(void) { return iz; }
 
- inline void setQ(double *_Q) {
+ inline void setQ(double *_Q) {//sets fluctuationg Q
   for (int i = 0; i < 7; i++) Q[i] = _Q[i];
 //  if (Q[T_] < 0.) {
 //   for (int i = 0; i < 7; i++) Q[i] = 0.;
 //  }
  }
- inline void setQ0(double *_Q0) {
+ inline void setQ0(double *_Q0) {//sets background Q
   for (int i = 0; i < 7; i++) Q0[i] = _Q0[i];
   if (Q0[T_] < 0.) {
   for (int i = 0; i < 7; i++) Q0[i] = 0.;
@@ -298,5 +297,4 @@ public:
  inline void setViscCorrCutFlag(double value) { viscCorrCut = value; }
  inline double getViscCorrCutFlag(void) { return viscCorrCut; }
  void Dump(double tau);  // dump the contents of the cell into dump.dat
-// void d_pi(int ix, int iy, int iz, double dpi0[4][4][4]);
 };

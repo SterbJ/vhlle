@@ -28,7 +28,7 @@ void handler(int sig) {
 }
 
 void transformPVQ0(EoS *eos, double Q[7], double &e, double &p, double &nb,
-                 double &nq, double &ns, double &vx, double &vy, double &vz) {
+                 double &nq, double &ns, double &vx, double &vy, double &vz) {//this remains the original method
  // conserved -> primitive transtormation requires
  // a numerical solution to 1D nonlinear algebraic equation:
  // v = M / ( Q_t + p(Q_t-M*v, n) )       (A.2)
@@ -46,13 +46,13 @@ void transformPVQ0(EoS *eos, double Q[7], double &e, double &p, double &nb,
   cout << setw(14) << Q[4] << setw(14) << Q[5] << setw(14) << Q[6] << endl;
  }
  double M = sqrt(Q[X_] * Q[X_] + Q[Y_] * Q[Y_] + Q[Z_] * Q[Z_]);
-// if (Q[T_] <= 0.) {
-//  e = 0.;
-//  p = 0.;
-//  vx = vy = vz = 0.;
-//  nb = nq = ns = 0.;
-//  return;
-// }
+ if (Q[T_] <= 0.) {
+  e = 0.;
+  p = 0.;
+  vx = vy = vz = 0.;
+  nb = nq = ns = 0.;
+  return;
+ }
  if (M == 0.) {
   e = Q[T_];
   vx = 0.;
@@ -144,29 +144,20 @@ void transformPVQ0(EoS *eos, double Q[7], double &e, double &p, double &nb,
 
 void transformPV(EoS *eos, double Q[7], double &e, double &p, double &nb,
                  double &nq, double &ns, double &vx, double &vy, double &vz, double e_0, double p_0, double nb_0, double nq_0, double ns_0, double vx_0, double vy_0, double vz_0) {
-// works only for static background case!!!
+// fluctuations
     double gamma_0 = 1./sqrt(1 - vx_0 * vx_0 - vy_0 * vy_0 - vz_0 * vz_0);
-//    double e1 = e_0;
-//    double e2 = 1.1 * e_0;
-//    double cs = sqrt(( eos->p(e2, nb, nq, ns) - eos->p(e1, nb, nq, ns) ) / (e2-e1));
     double cs2 = eos->cs2();
     
     e = Q[T_] / (gamma_0*gamma_0 * (1 + cs2 * (1 - 1./(gamma_0*gamma_0))));
-//    e= Q[T_];
-    
     p = e * cs2;
-//    p = eos->p(e+e_0, nb, nq, ns) - eos->p(e_0, nb, nq, ns);
-//    cout << pp << "     " << p << "     " << e << "     " << cs << "    " << e_0 << endl;
+
     vx = (Q[X_] - (Q[T_]+p)*vx_0) / ((e_0+p_0)*gamma_0*gamma_0);
     vy = (Q[Y_] - (Q[T_]+p)*vy_0) / ((e_0+p_0)*gamma_0*gamma_0);
     vz = (Q[Z_] - (Q[T_]+p)*vz_0) / ((e_0+p_0)*gamma_0*gamma_0);
-//    vx = Q[X_]/(e_0+p_0);
-//    vy = Q[Y_]/(e_0+p_0);
-//    vz = Q[Z_]/(e_0+p_0);
-//    cout << Q[X_] << "  " << vx << endl;
-    nb = Q[NB_] * sqrt(1 - vx_0 * vx_0 - vy_0 * vy_0 - vz_0 * vz_0);
-    nq = Q[NQ_] * sqrt(1 - vx_0 * vx_0 - vy_0 * vy_0 - vz_0 * vz_0);
-    ns = Q[NS_] * sqrt(1 - vx_0 * vx_0 - vy_0 * vy_0 - vz_0 * vz_0);
+
+    nb = Q[NB_] * sqrt(1 - vx_0 * vx_0 - vy_0 * vy_0 - vz_0 * vz_0); // not linearized
+    nq = Q[NQ_] * sqrt(1 - vx_0 * vx_0 - vy_0 * vy_0 - vz_0 * vz_0); // not linearized
+    ns = Q[NS_] * sqrt(1 - vx_0 * vx_0 - vy_0 * vy_0 - vz_0 * vz_0); // not linearized
 
 }
 
