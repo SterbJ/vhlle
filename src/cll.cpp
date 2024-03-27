@@ -87,13 +87,13 @@ void Cell::importVars(Cell* c) {
 }
 
 void Cell::updateByFlux() {
-// if(Q[0]+flux[0]<0.) // this condition should be reformulated I guess
-//  return;
+ if(Q0[0]+Q[0]+flux[0]<0.) // modified condition
+  return;
  for (int i = 0; i < 7; i++) Q[i] += flux[i];
 }
 
 void Cell::updateByViscFlux() {
- if(fabs(flux[0]) <= fabs(0.5*Q[0])) { // here an absolute value vas added
+ if(fabs(flux[0]) <= fabs(0.5*Q[0])) { // modified condition - an absolute value was added
   for (int i = 0; i < 7; i++) Q[i] += flux[i];
  } else if (flux[0]!=0.){
   double fac;

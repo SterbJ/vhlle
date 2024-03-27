@@ -14,8 +14,8 @@
 * arXiv:1312.4160 [nucl-th] or the published version of it.                   *
 *
  
- NEEDS SOME LINEARIZATION IN NB, NS, NQ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
- *
+ NEEDS SOME LINEARIZATION IN NB, NS, NQ !!!
+ 
 *******************************************************************************/
 
 #include <iostream>
@@ -107,8 +107,8 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix) 
   right->getPrimVarLeft(eos, tau, er, pr, nbr, nqr, nsr, vxr, vyr, vzr,
                         direction, er_0, pr_0, nbr_0, nqr_0, nsr_0, vxr_0, vyr_0, vzr_0);
 
-     El = (el_0 + pl_0) / (1 - vxl_0 * vxl_0 - vyl_0 * vyl_0 - vzl_0 * vzl_0);
-     Er = (er_0 + pr_0) / (1 - vxr_0 * vxr_0 - vyr_0 * vyr_0 - vzr_0 * vzr_0);
+  El = (el_0 + pl_0) / (1 - vxl_0 * vxl_0 - vyl_0 * vyl_0 - vzl_0 * vzl_0);
+  Er = (er_0 + pr_0) / (1 - vxr_0 * vxr_0 - vyr_0 * vyr_0 - vzr_0 * vzr_0);
   #ifndef CARTESIAN
   tauFactor = tau + 0.25 * dt;
   #endif
@@ -131,20 +131,20 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix) 
   #endif
  }
 
- if (el + el_0 < 0. || el_0 < 0.) {//??????????????????????????????????????????????????
+ if (el + el_0 < 0. || el_0 < 0.) {//modified condition - do we allow fluctuations in empty cell?
   el = 0.;
   el_0 = 0.;
   pl = 0.;
   pl_0 = 0.;
  }
- if (er + er_0 < 0. || er_0 < 0.) {
+ if (er + er_0 < 0. || er_0 < 0.) {//modified condition
   er = 0.;
   er_0 = 0.;
   pr = 0.;
   pr_0 = 0.;
  }
 
- if (el+el_0 > 1e10) {
+ if (el+el_0 > 1e10 || el_0 > 1e10) {//modified condition
   cout << "e>1e10; debug info below:\n";
   left->Dump(tau);
   // debugRiemann = true ;
@@ -165,8 +165,8 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix) 
  }
 
  // skip the procedure for two empty cells
- if (el+el_0 == 0. && er+er_0 == 0.) return;//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!________________________________________________________________________________________!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
- if (pr + pr_0 < 0.) {
+ if (el+el_0 == 0. && er+er_0 == 0.) return;//modified condition
+ if (pr + pr_0 < 0. || pr_0 < 0.) {//modified condition
   cout << "Negative pressure" << endl;
   left->getPrimVarRightQ0(eos, tau, el_0, pl_0, nbl_0, nql_0, nsl_0, vxl_0, vyl_0, vzl_0,
                            direction);
@@ -202,14 +202,13 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix) 
     U3r = (er0 + pr0) * (gammar_const * gammar_const * vzr ) + (er + pr) * gammar_const * gammar_const * vzr0;
     U4r = (er + pr) * gammar_const * gammar_const - pr;
 
+    Ubl = gammal_const * nbl; // not linearized
+    Uql = gammal_const * nql; // not linearized
+    Usl = gammal_const * nsl; // not linearized
 
- Ubl = gammal_const * nbl; // not linearized
- Uql = gammal_const * nql; // not linearized
- Usl = gammal_const * nsl; // not linearized
-
- Ubr = gammar_const * nbr; // not linearized
- Uqr = gammar_const * nqr; // not linearized
- Usr = gammar_const * nsr; // not linearized
+    Ubr = gammar_const * nbr; // not linearized
+    Uqr = gammar_const * nqr; // not linearized
+    Usr = gammar_const * nsr; // not linearized
 
  if (direction == X_) {
      
@@ -223,29 +222,29 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix) 
      Fyr = (er0 + pr0) * (gammar_const * vyr0 * gammar_const * vxr + gammar_const * vxr0 * gammar_const * vyr) + (er + pr) * gammar_const * vyr0 * gammar_const * vxr0;
      Fzr = (er0 + pr0) * (gammar_const * vzr0 * gammar_const * vxr + gammar_const * vxr0 * gammar_const * vzr) + (er + pr) * gammar_const * vzr0 * gammar_const * vxr0;
      
-  Fbl = Ubl * vxl; // not linearized
-  Fql = Uql * vxl; // not linearized
-  Fsl = Usl * vxl; // not linearized
+     Fbl = Ubl * vxl; // not linearized
+     Fql = Uql * vxl; // not linearized
+     Fsl = Usl * vxl; // not linearized
 
-  Fbr = Ubr * vxr; // not linearized
-  Fqr = Uqr * vxr; // not linearized
-  Fsr = Usr * vxr; // not linearized
+     Fbr = Ubr * vxr; // not linearized
+     Fqr = Uqr * vxr; // not linearized
+     Fsr = Usr * vxr; // not linearized
 
-  // for the case of constant c_s only
-  csb = sqrt(eos->cs2() +
-             0.5 * sqrt(El * Er) / pow(sqrt(El) + sqrt(Er), 2) *
+     // for the case of constant c_s only - takes into account only background
+     csb = sqrt(eos->cs2() +
+                0.5 * sqrt(El * Er) / pow(sqrt(El) + sqrt(Er), 2) *
                  pow(vxl0 - vxr0, 2));
-  vb = (sqrt(El) * vxl0 + sqrt(Er) * vxr0) / (sqrt(El) + sqrt(Er));
-  bl = min(0., min((vb - csb) / (1 - vb * csb),
+     vb = (sqrt(El) * vxl0 + sqrt(Er) * vxr0) / (sqrt(El) + sqrt(Er));
+     bl = min(0., min((vb - csb) / (1 - vb * csb),
                       (vxl0 - eos->cs()) / (1 - vxl0 * eos->cs())));
-  br = max(0., max((vb + csb) / (1 + vb * csb),
+     br = max(0., max((vb + csb) / (1 + vb * csb),
                       (vxr0 + eos->cs()) / (1 + vxr0 * eos->cs())));
 
-  dx = f->getDx();
+     dx = f->getDx();
 
-  // bl or br in the case of boundary with vacuum
-  if (el + el_0 == 0.) bl = -1.;
-  if (er + er_0 == 0.) br = 1.;
+     // bl or br in the case of boundary with vacuum
+     if (el + el_0 == 0.) bl = -1.;//modified condition
+     if (er + er_0 == 0.) br = 1.;//modified condition
  }
  if (direction == Y_) {
      
@@ -259,32 +258,32 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix) 
      Fyr = (er0 + pr0) * (gammar_const * vyr0 * gammar_const * vyr + gammar_const * vyr0 * gammar_const * vyr) + (el + pr) * gammar_const * vyr0 * gammar_const * vyr0 + pr;
      Fzr = (er0 + pr0) * (gammar_const * vzr0 * gammar_const * vyr + gammar_const * vyr0 * gammar_const * vzr) + (el + pr) * gammar_const * vzr0 * gammar_const * vyr0;
      
-  Fbl = Ubl * vyl; // not linearized
-  Fql = Uql * vyl; // not linearized
-  Fsl = Usl * vyl; // not linearized
+     Fbl = Ubl * vyl; // not linearized
+     Fql = Uql * vyl; // not linearized
+     Fsl = Usl * vyl; // not linearized
 
-  Fbr = Ubr * vyr; // not linearized
-  Fqr = Uqr * vyr; // not linearized
-  Fsr = Usr * vyr; // not linearized
+     Fbr = Ubr * vyr; // not linearized
+     Fqr = Uqr * vyr; // not linearized
+     Fsr = Usr * vyr; // not linearized
 
-  // for the case of constant c_s only
-  csb = sqrt(eos->cs2() +
-             0.5 * sqrt(El * Er) / pow(sqrt(El) + sqrt(Er), 2) *
+     // for the case of constant c_s only - takes into account only background
+     csb = sqrt(eos->cs2() +
+                0.5 * sqrt(El * Er) / pow(sqrt(El) + sqrt(Er), 2) *
                  pow(vyl_0 - vyr_0, 2));
-  vb = (sqrt(El) * vyl_0 + sqrt(Er) * vyr_0) / (sqrt(El) + sqrt(Er));
-  bl = min(0., min((vb - csb) / (1 - vb * csb),
-                   (vyl_0 - eos->cs()) / (1 - vyl_0 * eos->cs())));
-  br = max(0., max((vb + csb) / (1 + vb * csb),
-                   (vyr_0 + eos->cs()) / (1 + vyr_0 * eos->cs())));
+     vb = (sqrt(El) * vyl_0 + sqrt(Er) * vyr_0) / (sqrt(El) + sqrt(Er));
+     bl = min(0., min((vb - csb) / (1 - vb * csb),
+                      (vyl_0 - eos->cs()) / (1 - vyl_0 * eos->cs())));
+     br = max(0., max((vb + csb) / (1 + vb * csb),
+                      (vyr_0 + eos->cs()) / (1 + vyr_0 * eos->cs())));
 
-  dx = f->getDy();
+     dx = f->getDy();
 
-  // bl or br in the case of boundary with vacuum
-  if (el+el_0 == 0.) bl = -1.;
-  if (er+er_0 == 0.) br = 1.;
+     // bl or br in the case of boundary with vacuum
+     if (el + el_0 == 0.) bl = -1.;//modified condition
+     if (er + er_0 == 0.) br = 1.;//modified condition
  }
  if (direction == Z_) {
-  double tau1 = tauFactor;
+     double tau1 = tauFactor;
      
      Ftl = (el0 + pl0) * (gammal_const * gammal_const * vzl ) / tau1 + (el + pl) * gammal_const * gammal_const * vzl0 / tau1;
      Fxl = (el0 + pl0) * (gammal_const * vxl0 * gammal_const * vzl + gammal_const * vzl0 * gammal_const * vxl) / tau1 + (el + pl) * gammal_const * vxl0 * gammal_const * vzl0 / tau1;
@@ -296,32 +295,32 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix) 
      Fyr = (er0 + pr0) * (gammar_const * vyr0 * gammar_const * vzr + gammar_const * vzr0 * gammar_const * vyr) / tau1 + (er + pr) * gammar_const * vyr0 * gammar_const * vzr0 / tau1;
      Fzr = (er0 + pr0) * (gammar_const * vzr0 * gammar_const * vzr + gammar_const * vzr0 * gammar_const * vzr) / tau1 + (er + pr) * gammar_const * vzr0 * gammar_const * vzr0 / tau1 + pr / tau1;
      
-  Fbl = Ubl * vzl / tau1; // not linearized
-  Fql = Uql * vzl / tau1; // not linearized
-  Fsl = Usl * vzl / tau1; // not linearized
+     Fbl = Ubl * vzl / tau1; // not linearized
+     Fql = Uql * vzl / tau1; // not linearized
+     Fsl = Usl * vzl / tau1; // not linearized
 
-  Fbr = Ubr * vzr / tau1; // not linearized
-  Fqr = Uqr * vzr / tau1; // not linearized
-  Fsr = Usr * vzr / tau1; // not linearized
+     Fbr = Ubr * vzr / tau1; // not linearized
+     Fqr = Uqr * vzr / tau1; // not linearized
+     Fsr = Usr * vzr / tau1; // not linearized
 
-  // for the case of constant c_s only
-  // factor 1/tau accounts for eta-coordinate
+     // for the case of constant c_s only
+     // factor 1/tau accounts for eta-coordinate
 
-  // different estimate
-  csb = sqrt(eos->cs2() +
-             0.5 * sqrt(El * Er) / pow(sqrt(El) + sqrt(Er), 2) *
+     // different estimate - takes into account only background
+     csb = sqrt(eos->cs2() +
+                0.5 * sqrt(El * Er) / pow(sqrt(El) + sqrt(Er), 2) *
                  pow(vzl_0 - vzr_0, 2));
-  vb = (sqrt(El) * vzl_0 + sqrt(Er) * vzr_0) / (sqrt(El) + sqrt(Er));
-  bl = 1. / tau * min(0., min((vb - csb) / (1 - vb * csb),
-                              (vzl_0 - eos->cs()) / (1 - vzl_0 * eos->cs())));
-  br = 1. / tau * max(0., max((vb + csb) / (1 + vb * csb),
-                              (vzr_0 + eos->cs()) / (1 + vzr_0 * eos->cs())));
+     vb = (sqrt(El) * vzl_0 + sqrt(Er) * vzr_0) / (sqrt(El) + sqrt(Er));
+     bl = 1. / tau * min(0., min((vb - csb) / (1 - vb * csb),
+                                 (vzl_0 - eos->cs()) / (1 - vzl_0 * eos->cs())));
+     br = 1. / tau * max(0., max((vb + csb) / (1 + vb * csb),
+                                 (vzr_0 + eos->cs()) / (1 + vzr_0 * eos->cs())));
 
-  dx = f->getDz();
+     dx = f->getDz();
 
-  // bl or br in the case of boundary with vacuum
-  if (el+el_0 == 0.) bl = -1. / tau;
-  if (er+er_0 == 0.) br = 1. / tau;
+     // bl or br in the case of boundary with vacuum
+     if (el + el_0 == 0.) bl = -1. / tau;//modified condition
+     if (er + er_0 == 0.) br = 1. / tau;//modified condition
  }
 
  if (bl == 0. && br == 0.) return;
@@ -575,7 +574,7 @@ void Hydro::NSquant(int ix, int iy, int iz, double pi[4][4], double &Pi, double 
     dmu[0][2] = (uy1 - uy0) / dt;
     dmu[0][3] = (uz1 - uz0) / dt;
     
-    if (e1+e_01 <= 0. || e0+e_0 <= 0.) {  // matter-vacuum
+    if (e1+e_01 <= 0. || e0+e_0 <= 0.) {  // modified condition - matter-vacuum
         dmu[0][0] = dmu[0][1] = dmu[0][2] = dmu[0][3] = 0.;
         dmu0[0][0] = dmu0[0][1] = dmu0[0][2] = dmu0[0][3] = 0.;
     }
@@ -585,7 +584,7 @@ void Hydro::NSquant(int ix, int iy, int iz, double pi[4][4], double &Pi, double 
     f->getCell(ix - 1, iy, iz)->getPrimVarHCenterQ0(eos, tau, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0);
     f->getCell(ix - 1, iy, iz)->getPrimVarHCenter(eos, tau, e0, p, nb, nq, ns, vx0, vy0, vz0, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0);
     
-    if (e1+e_01 > 0. && e0+e_0 > 0.) {
+    if (e1+e_01 > 0. && e0+e_0 > 0.) {// modified condition
         // background
         ut0_0 = 1./ sqrt(1. - vx_0 * vx_0 - vy_0 * vy_0 - vz_0 * vz_0);
         ux0_0 = ut0_0 * vx_0;
@@ -628,7 +627,7 @@ void Hydro::NSquant(int ix, int iy, int iz, double pi[4][4], double &Pi, double 
         f->getCell(ix, iy - 1, iz)->getPrimVarHCenterQ0(eos, tau, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0);
         f->getCell(ix, iy - 1, iz)->getPrimVarHCenter(eos, tau, e0, p, nb, nq, ns, vx0, vy0, vz0, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0);
     
-        if (e1+e_01 > 0. && e0+e_0 > 0.) {
+        if (e1+e_01 > 0. && e0+e_0 > 0.) {// modified condition
             // background
             ut0_0 = 1./ sqrt(1. - vx_0 * vx_0 - vy_0 * vy_0 - vz_0 * vz_0);
             ux0_0 = ut0_0 * vx_0;
@@ -669,7 +668,7 @@ void Hydro::NSquant(int ix, int iy, int iz, double pi[4][4], double &Pi, double 
         f->getCell(ix, iy, iz - 1)->getPrimVarHCenterQ0(eos, tau, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0);
         f->getCell(ix, iy, iz - 1)->getPrimVarHCenter(eos, tau, e0, p, nb, nq, ns, vx0, vy0, vz0, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0);
     
-        if (e1+e_01 > 0. && e0+e_0 > 0.) {
+        if (e1+e_01 > 0. && e0+e_0 > 0.) {// modified condition
             // background
             ut0_0 = 1./ sqrt(1. - vx_0 * vx_0 - vy_0 * vy_0 - vz_0 * vz_0);
             ux0_0 = ut0_0 * vx_0;
@@ -838,7 +837,7 @@ void Hydro::ISformal() {
     c->getPrimVarHCenter(eos, tauMinusHalf, e, p, nb, nq, ns, vx, vy,
                          vz, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0);  // instead of getPrimVar()
        
-    if (e+e_0 <= 0.) {             // empty cell?
+    if (e+e_0 <= 0.) {// modified condition             // empty cell?
      for (int i = 0; i < 4; i++)
       for (int j = 0; j <= i; j++) {
        c->setpiH0(i, j, 0.0);
@@ -922,10 +921,10 @@ void Hydro::ISformal() {
      trcoeff->getOther(e_0, nb, nq, ns, deltapipi, taupipi, lambdapiPi, phi7);
      phi70 = phi7/taupi0;  // dividing by tau_pi here, to avoid NaNs when tau_pi==0
      delta_phi7 = phi7 / (taupi0 * taupi0) * delta_taupi; // fluctuation in phi7 coeff - it is the only one which does not include taupi
-     if(taupi0<0.5*dt) // what about this condition?
+     if(taupi0<0.5*dt) // modified condition - what about this condition?
       deltapipi = taupipi = lambdapiPi = phi7 = 0.0;
      trcoeff->getOtherBulk(e_0, nb, nq, ns, delPiPi, lamPipi);
-     if(tauPi0<0.5*dt)
+     if(tauPi0<0.5*dt)// modified condition
       delPiPi = lamPipi = 0.0;
      //#############
      double Delta[10]; // corresponds to background Delta
@@ -941,20 +940,20 @@ void Hydro::ISformal() {
                             piNS[i][j]);
        c->setpiH0(i, j, (c->getpi_bck(i, j) - piNS0[i][j]) * dt / 2.0  / gamma / (taupi0*taupi0) * delta_taupi ); // this should be the same even for formal solution, I think
 #else
-          if(taupi0>0.5*dt){// or what the condition should be?
+          if(taupi0>0.5*dt){// modified condition - what the condition should be?
               c->setpiH0(i, j, c->getpi(i, j) -
                          (c->getpi(i, j) - piNS[i][j]) * dt / 2.0 / gamma / taupi0);
               c->setpiH0(i, j, (c->getpi_bck(i, j) - piNS0[i][j]) * dt / 2.0 / gamma / (taupi0 * taupi0) * delta_taupi); // source term from delta tau_pi
           }
-      else
-       c->setpiH0(i, j, piNS[i][j]);
+          else
+              c->setpiH0(i, j, piNS[i][j]);
 #endif
       }
 #ifdef FORMAL_SOLUTION
      c->setPiH0((c->getPi() - PiNS) * exp(-dt / 2.0 / gamma / tauPi0) + PiNS);
      c->setPiH0( (c->getPi_bck() - PiNS0) * dt / 2.0 / gamma / (tauPi0 * tauPi0) * delta_tauPi );
 #else
-        if(tauPi0>0.5*dt){
+        if(tauPi0>0.5*dt){// modified condition
             c->setPiH0(c->getPi() - (c->getPi() - PiNS) * dt / 2.0 / gamma / tauPi0);
             c->setPiH0( (c->getPi_bck() - PiNS0) * dt / 2.0 / gamma / (tauPi0 * tauPi0) * delta_tauPi );
         }
@@ -1037,13 +1036,13 @@ void Hydro::ISformal() {
        c->setpi0(i, j, (c->getpiH0_bck(i, j) - piNS0[i][j]) * dt / gamma / (taupi0*taupi0) * delta_taupi );//H0 or not?
 
 #else
-      if(taupi0>0.5*dt){
+      if(taupi0>0.5*dt){// modified condition
               c->setpi0(i, j, c->getpi(i, j) -
                         (c->getpiH0(i, j) - piNS[i][j]) * dt / gamma / taupi0);
               c->setpi0(i, j, (c->getpiH0_bck(i, j) - piNS0[i][j]) * dt / gamma / (taupi0*taupi0) * delta_taupi );
           }
       else
-       c->setpi0(i, j, piNS[i][j]);
+          c->setpi0(i, j, piNS[i][j]);
 #endif
       }
         
@@ -1051,12 +1050,12 @@ void Hydro::ISformal() {
      c->setPi0((c->getPi() - PiNS) * exp(-dt / gamma / tauPi0) + PiNS);
      c->setPi0( (c->getPiH0_bck() - PiNS0) * dt / gamma / (tauPi0 * tauPi0) * delta_tauPi );
 #else
-        if(tauPi0>0.5*dt){
+        if(tauPi0>0.5*dt){// modified condition
             c->setPi0(c->getPi() - (c->getPiH0() - PiNS) * dt / gamma / tauPi0);
             c->setPi0( (c->getPiH0_bck() - PiNS0) * dt / gamma / (tauPi0 * tauPi0) * delta_tauPi );
         }
-    else
-     c->setPi0(PiNS);
+        else
+            c->setPi0(PiNS);
 #endif
      #ifndef CARTESIAN
      tau1 = tau - dt * 0.5;
@@ -1129,7 +1128,7 @@ void Hydro::ISformal() {
     c->getPrimVarHCenter(eos, tauMinusHalf, e, p, nb, nq, ns, vx, vy,
                          vz, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0);  // getPrimVar() before
        
-    if (e_0 <= 0.) continue;
+    if (e_0 + e <= 0.) continue;// modified condition
     double xm = -vx_0 * dt / f->getDx();
     double ym = -vy_0 * dt / f->getDy();
     double zm = -vz_0 * dt / f->getDz() / tauMinusHalf;
@@ -1180,7 +1179,7 @@ void Hydro::ISformal() {
     double maxpi = 0.;
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++){
-            if (fabs(pi_bck[i][j]) > maxpi) maxpi = fabs(pi_bck[i][j]); // this is always 0 ... need to change
+            if (fabs(pi_bck[i][j]) > maxpi) maxpi = fabs(pi_bck[i][j]); // modified condition - this is always 0 ... need to change
         }
     bool rescaled = false;
     if (maxT0 / maxpi < 1.0) { // I am not sure how this rescaling should work - condition is made according to the background but the fluctuation is rescaled - probably needs a modification
