@@ -574,7 +574,7 @@ void Hydro::NSquant(int ix, int iy, int iz, double pi[4][4], double &Pi, double 
     dmu[0][2] = (uy1 - uy0) / dt;
     dmu[0][3] = (uz1 - uz0) / dt;
     
-    if (e1+e_01 <= 0. || e0+e_0 <= 0.) {  // modified condition - matter-vacuum
+    if ((e1+e_01 <= 0. || e0+e_0 <= 0.) || (e_01 <= 0. || e_0 <= 0.)) {  // modified condition - matter-vacuum
         dmu[0][0] = dmu[0][1] = dmu[0][2] = dmu[0][3] = 0.;
         dmu0[0][0] = dmu0[0][1] = dmu0[0][2] = dmu0[0][3] = 0.;
     }
@@ -837,7 +837,7 @@ void Hydro::ISformal() {
     c->getPrimVarHCenter(eos, tauMinusHalf, e, p, nb, nq, ns, vx, vy,
                          vz, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0);  // instead of getPrimVar()
        
-    if (e+e_0 <= 0.) {// modified condition             // empty cell?
+    if (e+e_0 <= 0. || e_0 <= 0.) {// modified condition             // empty cell?
      for (int i = 0; i < 4; i++)
       for (int j = 0; j <= i; j++) {
        c->setpiH0(i, j, 0.0);
@@ -921,10 +921,10 @@ void Hydro::ISformal() {
      trcoeff->getOther(e_0, nb, nq, ns, deltapipi, taupipi, lambdapiPi, phi7);
      phi70 = phi7/taupi0;  // dividing by tau_pi here, to avoid NaNs when tau_pi==0
      delta_phi7 = phi7 / (taupi0 * taupi0) * delta_taupi; // fluctuation in phi7 coeff - it is the only one which does not include taupi
-     if(taupi0<0.5*dt) // modified condition - what about this condition?
+     if(taupi0 + delta_taupi < 0.5 * dt) // modified condition - what about this condition?
       deltapipi = taupipi = lambdapiPi = phi7 = 0.0;
      trcoeff->getOtherBulk(e_0, nb, nq, ns, delPiPi, lamPipi);
-     if(tauPi0<0.5*dt)// modified condition
+     if(tauPi0 + delta_tauPi < 0.5 * dt)// modified condition
       delPiPi = lamPipi = 0.0;
      //#############
      double Delta[10]; // corresponds to background Delta
@@ -940,7 +940,7 @@ void Hydro::ISformal() {
                             piNS[i][j]);
        c->setpiH0(i, j, (c->getpi_bck(i, j) - piNS0[i][j]) * dt / 2.0  / gamma / (taupi0*taupi0) * delta_taupi ); // this should be the same even for formal solution, I think
 #else
-          if(taupi0>0.5*dt){// modified condition - what the condition should be?
+          if(taupi0 + delta_taupi > 0.5 * dt){// modified condition - what the condition should be?
               c->setpiH0(i, j, c->getpi(i, j) -
                          (c->getpi(i, j) - piNS[i][j]) * dt / 2.0 / gamma / taupi0);
               c->setpiH0(i, j, (c->getpi_bck(i, j) - piNS0[i][j]) * dt / 2.0 / gamma / (taupi0 * taupi0) * delta_taupi); // source term from delta tau_pi
@@ -953,7 +953,7 @@ void Hydro::ISformal() {
      c->setPiH0((c->getPi() - PiNS) * exp(-dt / 2.0 / gamma / tauPi0) + PiNS);
      c->setPiH0( (c->getPi_bck() - PiNS0) * dt / 2.0 / gamma / (tauPi0 * tauPi0) * delta_tauPi );
 #else
-        if(tauPi0>0.5*dt){// modified condition
+        if(tauPi0 + delta_tauPi > 0.5 * dt){// modified condition
             c->setPiH0(c->getPi() - (c->getPi() - PiNS) * dt / 2.0 / gamma / tauPi0);
             c->setPiH0( (c->getPi_bck() - PiNS0) * dt / 2.0 / gamma / (tauPi0 * tauPi0) * delta_tauPi );
         }
@@ -1036,7 +1036,7 @@ void Hydro::ISformal() {
        c->setpi0(i, j, (c->getpiH0_bck(i, j) - piNS0[i][j]) * dt / gamma / (taupi0*taupi0) * delta_taupi );//H0 or not?
 
 #else
-      if(taupi0>0.5*dt){// modified condition
+      if(taupi0 + delta_taupi > 0.5 * dt){// modified condition
               c->setpi0(i, j, c->getpi(i, j) -
                         (c->getpiH0(i, j) - piNS[i][j]) * dt / gamma / taupi0);
               c->setpi0(i, j, (c->getpiH0_bck(i, j) - piNS0[i][j]) * dt / gamma / (taupi0*taupi0) * delta_taupi );
@@ -1050,7 +1050,7 @@ void Hydro::ISformal() {
      c->setPi0((c->getPi() - PiNS) * exp(-dt / gamma / tauPi0) + PiNS);
      c->setPi0( (c->getPiH0_bck() - PiNS0) * dt / gamma / (tauPi0 * tauPi0) * delta_tauPi );
 #else
-        if(tauPi0>0.5*dt){// modified condition
+        if(tauPi0 + delta_tauPi > 0.5 * dt){// modified condition
             c->setPi0(c->getPi() - (c->getPiH0() - PiNS) * dt / gamma / tauPi0);
             c->setPi0( (c->getPiH0_bck() - PiNS0) * dt / gamma / (tauPi0 * tauPi0) * delta_tauPi );
         }
@@ -1128,7 +1128,7 @@ void Hydro::ISformal() {
     c->getPrimVarHCenter(eos, tauMinusHalf, e, p, nb, nq, ns, vx, vy,
                          vz, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0);  // getPrimVar() before
        
-    if (e_0 + e <= 0.) continue;// modified condition
+    if (e_0 + e <= 0. || e_0 <= 0.) continue;// modified condition
     double xm = -vx_0 * dt / f->getDx();
     double ym = -vy_0 * dt / f->getDy();
     double zm = -vz_0 * dt / f->getDz() / tauMinusHalf;
@@ -1179,10 +1179,10 @@ void Hydro::ISformal() {
     double maxpi = 0.;
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++){
-            if (fabs(pi_bck[i][j]) > maxpi) maxpi = fabs(pi_bck[i][j]); // modified condition - this is always 0 ... need to change
+            if (fabs(pi[i][j]) > maxpi) maxpi = fabs(pi[i][j]); // modified condition - not sure about this
         }
     bool rescaled = false;
-    if (maxT0 / maxpi < 1.0) { // I am not sure how this rescaling should work - condition is made according to the background but the fluctuation is rescaled - probably needs a modification
+    if (maxT0 / maxpi < 1.0) { // I am not sure how this rescaling should work
      for (int i = 0; i < 4; i++)
       for (int j = 0; j < 4; j++) {
        pi[i][j] = 0.1 * pi[i][j] * maxT0 / maxpi;
