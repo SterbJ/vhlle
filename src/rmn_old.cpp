@@ -27,7 +27,7 @@ void handler(int sig) {
  exit(1);
 }
 
-void transformPVQbck(EoS *eos, double Q[7], double &e, double &p, double &nb,
+void transformPVQ0(EoS *eos, double Q[7], double &e, double &p, double &nb,
                  double &nq, double &ns, double &vx, double &vy, double &vz) {//this remains the original method
  // conserved -> primitive transtormation requires
  // a numerical solution to 1D nonlinear algebraic equation:
@@ -142,22 +142,22 @@ void transformPVQbck(EoS *eos, double Q[7], double &e, double &p, double &nb,
  }
 }
 
-void transformPV(EoS *eos, double d_Q[7], double &d_e, double &d_p, double &d_nb,
-                 double &d_nq, double &d_ns, double &d_vx, double &d_vy, double &d_vz, double e_bck, double p_bck, double nb_bck, double nq_bck, double ns_bck, double vx_bck, double vy_bck, double vz_bck) {
+void transformPV(EoS *eos, double Q[7], double &e, double &p, double &nb,
+                 double &nq, double &ns, double &vx, double &vy, double &vz, double e_0, double p_0, double nb_0, double nq_0, double ns_0, double vx_0, double vy_0, double vz_0) {
 // fluctuations
-    double gamma_bck = 1./sqrt(1 - vx_bck * vx_bck - vy_bck * vy_bck - vz_bck * vz_bck);
+    double gamma_0 = 1./sqrt(1 - vx_0 * vx_0 - vy_0 * vy_0 - vz_0 * vz_0);
     double cs2 = eos->cs2();
     
-    d_e = d_Q[T_] / (gamma_bck*gamma_bck * (1 + cs2 * (1 - 1./(gamma_bck*gamma_bck))));
-    d_p = d_e * cs2;
+    e = Q[T_] / (gamma_0*gamma_0 * (1 + cs2 * (1 - 1./(gamma_0*gamma_0))));
+    p = e * cs2;
 
-    d_vx = (d_Q[X_] - (d_Q[T_]+d_p)*vx_bck) / ((e_bck+p_bck)*gamma_bck*gamma_bck);
-    d_vy = (d_Q[Y_] - (d_Q[T_]+d_p)*vy_bck) / ((e_bck+p_bck)*gamma_bck*gamma_bck);
-    d_vz = (d_Q[Z_] - (d_Q[T_]+d_p)*vz_bck) / ((e_bck+p_bck)*gamma_bck*gamma_bck);
+    vx = (Q[X_] - (Q[T_]+p)*vx_0) / ((e_0+p_0)*gamma_0*gamma_0);
+    vy = (Q[Y_] - (Q[T_]+p)*vy_0) / ((e_0+p_0)*gamma_0*gamma_0);
+    vz = (Q[Z_] - (Q[T_]+p)*vz_0) / ((e_0+p_0)*gamma_0*gamma_0);
 
-    d_nb = d_Q[NB_] * sqrt(1 - vx_bck * vx_bck - vy_bck * vy_bck - vz_bck * vz_bck); // not linearized
-    d_nq = d_Q[NQ_] * sqrt(1 - vx_bck * vx_bck - vy_bck * vy_bck - vz_bck * vz_bck); // not linearized
-    d_ns = d_Q[NS_] * sqrt(1 - vx_bck * vx_bck - vy_bck * vy_bck - vz_bck * vz_bck); // not linearized
+    nb = Q[NB_] * sqrt(1 - vx_0 * vx_0 - vy_0 * vy_0 - vz_0 * vz_0); // not linearized
+    nq = Q[NQ_] * sqrt(1 - vx_0 * vx_0 - vy_0 * vy_0 - vz_0 * vz_0); // not linearized
+    ns = Q[NS_] * sqrt(1 - vx_0 * vx_0 - vy_0 * vy_0 - vz_0 * vz_0); // not linearized
 
 }
 

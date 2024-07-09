@@ -66,7 +66,7 @@ void readParameters(char *parFile) {
   cout << "cannot open parameters file " << parFile << endl;
   exit(1);
  }
- cout << "vhlle: reading parameters from " << parFile << endl;
+// cout << "vhlle: reading parameters from " << parFile << endl;
  while (fin.good()) {
   string line;
   getline(fin, line);
@@ -140,10 +140,10 @@ void readParameters(char *parFile) {
    etaSMin = atof(parValue);
   else if (strcmp(parName, "freezeoutOnly") == 0)
    freezeoutOnly = atoi(parValue);
-  else if (parName[0] == '!')
-   cout << "CCC " << sline.str() << endl;
-  else
-   cout << "UUU " << sline.str() << endl;
+//  else if (parName[0] == '!')
+//   cout << "CCC " << sline.str() << endl;
+//  else
+//   cout << "UUU " << sline.str() << endl;
  }
 }
 
@@ -208,10 +208,10 @@ void readCommandLine(int argc, char** argv)
    if(strcmp(argv[iarg],"-ISinput")==0) isInputFile = argv[iarg+1];
    if(strcmp(argv[iarg],"-outputDir")==0) outputDir = argv[iarg+1];
   }
-  cout << "vhlle: command line parameters are:\n";
-  cout << "collision system:  " << collSystem << endl;
-  cout << "ini.state input:  " << isInputFile << endl;
-  cout << "output directory:  " << outputDir << endl;
+//  cout << "vhlle: command line parameters are:\n";
+//  cout << "collision system:  " << collSystem << endl;
+//  cout << "ini.state input:  " << isInputFile << endl;
+//  cout << "output directory:  " << outputDir << endl;
  }
 }
 
@@ -250,164 +250,166 @@ Fluid* expandGrid2x(Hydro* h, EoS* eos, EoS* eosH, TransportCoeff *trcoeff) {
 // double epsilon0, alpha, impactPar, s0ScaleFactor ;
 
 int main(int argc, char **argv) {
- // pointers to all the main objects
- EoS *eos;
- EoS *eosH;
- TransportCoeff *trcoeff;
- Fluid *f;
- Hydro *h;
- time_t start = 0, end;
 
- time(&start);
+        // pointers to all the main objects
+        EoS *eos;
+        EoS *eosH;
+        TransportCoeff *trcoeff;
+        Fluid *f;
+        Hydro *h;
+        time_t start = 0, end;
+        
+        time(&start);
+        
+        cout << "***** running in BOX MODE *****\n" ;
+        
+        // read parameters from file
+        setDefaultParameters();
+        readCommandLine(argc, argv);
+        printParameters();
+        
+        // EoS for hydro evolution
+        if (eosType == 0)
+            eos = new EoSs("eos/Laine_nf3.dat", 3);
+        else if (eosType == 1)
+            eos = new EoSChiral();
+        else if (eosType == 2)
+            eos = new EoSAZH();
+        else {
+//            cout << "eosType != 0,1,2\n";
+            return 0;
+        }
+        
+        // hadronic EoS for hypersurface creation
+        if (eosTypeHadron == 0) {
+            eosH = new EoSHadron((char*)"eos/eosHadronLog.dat"); //PDG hadronic EoS
+        } else if (eosTypeHadron == 1) {
+            eosH = new EoSSmash((char*)"eos/hadgas_eos_SMASH.dat", 101, 51, 51); //SMASH hadronic EoS
+        } else {
+            cout << "Unknown haronic EoS type for hypersurface creation.\n" <<
+            "eosTypeHadron should be either \"0\" (PDG hadronic EoS) or " <<
+            "\"1\" (SMASH hadronic EoS).\n";
+            return 0;
+        }
+        
+        
+        // transport coefficients
+        trcoeff = new TransportCoeff(etaS, zetaS, zetaSparam, eos, etaSparam, ah, al, aRho, T0, etaSMin, eEtaSMin);
+        
+        f = new Fluid(eos, eosH, trcoeff, nx, ny, nz, xmin, xmax, ymin, ymax, etamin,
+                      etamax, dtau, eCrit);
+        cout << "fluid allocation done\n";
+        
+#ifdef CARTESIAN
+        // tau0 = 1.0;  //  to eliminate tau0 factors when setting up initial state in Cartesian frame
+        double proper_tau0=1.;
+#endif
+        
+        // initial conditions
+        // if (icModel == 1) {  // optical Glauber
+        //  ICGlauber *ic = new ICGlauber(epsilon0, impactPar, tau0);
+        //  ic->setIC(f, eos);
+        //  delete ic;
+        // } else if (icModel == 2) {  // Glauber_table + parametrized rapidity dependence
+        //  IC *ic = new IC(isInputFile.c_str(), s0ScaleFactor);
+        //  ic->setIC(f, eos, tau0);
+        //  delete ic;
+        // } else if (icModel == 3) {  // UrQMD IC
+        //  IcPartUrqmd *ic = new IcPartUrqmd(f, isInputFile.c_str(), Rgt, Rgz, tau0);
+        //  ic->setIC(f, eos);
+        //  delete ic;
+        // } else if (icModel == 4) {  // analytical Gubser solution
+        //  ICGubser *ic = new ICGubser();
+        //  ic->setIC(f, eos, tau0);
+        //  delete ic;
+        //  }else if(icModel==5){ // IC from GLISSANDO + rapidity dependence
+        //   IcGlissando *ic = new IcGlissando(f, isInputFile.c_str(), tau0, collSystem.c_str());
+        //   ic->setIC(f, eos);
+        //   delete ic;
+        // } else if (icModel == 6){ // SMASH IC
+        //   IcPartSMASH *ic = new IcPartSMASH(f, isInputFile.c_str(), Rgt, Rgz, tau0);
+        //   ic->setIC(f, eos);
+        //   delete ic;
+        // } else if(icModel==7){ // IC from Trento
+        //   IcTrento *ic = new IcTrento(f, isInputFile.c_str(), tau0, collSystem.c_str());
+        //   ic->setIC(f, eos);
+        //   delete ic;
+        // } else
+        if(icModel==8){ // IC box mode
+            IcBox *ic = new IcBox(f, isInputFile.c_str(), proper_tau0, collSystem.c_str());
+            ic->setIC(f, eos);
+            delete ic;
+        } else {
+            cout << "icModel = " << icModel << " not implemented\n";
+        }
+//        cout << "IC done\n";
+        
+        // For calculating initial anisotropy without running full hydro, uncomment following line
+        //f->InitialAnisotropies(tau0) ;
+        
+        time_t tinit = 0;
+        time(&tinit);
+        float diff = difftime(tinit, start);
+        cout << "Init time = " << diff << " [sec]" << endl;
+        
+        // hydro init
+        h = new Hydro(f, eos, trcoeff, tau0, dtau);
+        start = 0;
+        time(&start);
+        // h->setNSvalues() ; // initialize viscous terms
+        
+        // f->initOutput(outputDir.c_str(), tau0, freezeoutOnly);
+        
+        bool resized = false; // flag if the grid has been resized
+        double ctime; // current time, tau or t depending on the coordinate frame
+        do {
+            // small tau: decrease timestep by making substeps, in order
+            // to avoid instabilities in eta direction (signal velocity ~1/tau)
+            int nSubSteps = 1;
+#ifdef CARTESIAN
+            ctime = h->time();
+#else
+            ctime = h->getTau();
+#endif
+            
+//                 cout << "ctime" << setw(14) << ctime << endl; // for the whole profile at given timestep
+                 cout << setw(14) << ctime << "     "; // for a time profile at specifis point
+            
+            
+            //  while (dtau / nSubSteps >
+            //         1.0 * ctime * (etamax - etamin) / (nz - 1)) {
+            //   nSubSteps *= 2;  // 0.02 in "old" coordinates
+            //  }
+            if(nSubSteps>1) {
+                h->setDtau(h->getDtau() / nSubSteps);
+                for (int j = 0; j < nSubSteps; j++)
+                    h->performStep(ctime);
+                h->setDtau(h->getDtau() * nSubSteps);
+                cout << "timestep reduced by " << nSubSteps << endl;
+            } else
+                h->performStep(ctime);
+#ifdef CARTESIAN
+            ctime = h->time();
+#else
+            ctime = h->getTau();
+#endif
+            //  if (!freezeoutOnly)
+            //   f->outputGnuplot(ctime);
+            //  if(ctime>=tauResize and resized==false) {
+            //   cout << "grid resize\n";
+            //   f = expandGrid2x(h, eos, eosH, trcoeff);
+            //   resized = true;
+            //  }
+        } while(ctime<tauMax+0.0001);
+        
+        end = 0;
+        time(&end);
+        float diff2 = difftime(end, start);
+        cout << "Execution time = " << diff2 << " [sec]" << endl;
+        
+        delete f;
+        delete h;
+        delete eos;
+        delete eosH;
 
-  cout << "***** running in BOX MODE *****\n" ;
-
- // read parameters from file
- setDefaultParameters();
- readCommandLine(argc, argv);
- printParameters();
-
- // EoS for hydro evolution
- if (eosType == 0)
-  eos = new EoSs("eos/Laine_nf3.dat", 3);
- else if (eosType == 1)
-  eos = new EoSChiral();
- else if (eosType == 2)
-  eos = new EoSAZH();
- else {
-  cout << "eosType != 0,1,2\n";
-  return 0;
- }
-
- // hadronic EoS for hypersurface creation
- if (eosTypeHadron == 0) {
-   eosH = new EoSHadron((char*)"eos/eosHadronLog.dat"); //PDG hadronic EoS
- } else if (eosTypeHadron == 1) {
-   eosH = new EoSSmash((char*)"eos/hadgas_eos_SMASH.dat", 101, 51, 51); //SMASH hadronic EoS
- } else {
-   cout << "Unknown haronic EoS type for hypersurface creation.\n" <<
-           "eosTypeHadron should be either \"0\" (PDG hadronic EoS) or " <<
-           "\"1\" (SMASH hadronic EoS).\n";
-   return 0;
- }
-
-
- // transport coefficients
- trcoeff = new TransportCoeff(etaS, zetaS, zetaSparam, eos, etaSparam, ah, al, aRho, T0, etaSMin, eEtaSMin);
-
- f = new Fluid(eos, eosH, trcoeff, nx, ny, nz, xmin, xmax, ymin, ymax, etamin,
-               etamax, dtau, eCrit);
- cout << "fluid allocation done\n";
-
- #ifdef CARTESIAN
-// tau0 = 1.0;  //  to eliminate tau0 factors when setting up initial state in Cartesian frame
- double proper_tau0=1.;
- #endif
-
- // initial conditions
-// if (icModel == 1) {  // optical Glauber
-//  ICGlauber *ic = new ICGlauber(epsilon0, impactPar, tau0);
-//  ic->setIC(f, eos);
-//  delete ic;
-// } else if (icModel == 2) {  // Glauber_table + parametrized rapidity dependence
-//  IC *ic = new IC(isInputFile.c_str(), s0ScaleFactor);
-//  ic->setIC(f, eos, tau0);
-//  delete ic;
-// } else if (icModel == 3) {  // UrQMD IC
-//  IcPartUrqmd *ic = new IcPartUrqmd(f, isInputFile.c_str(), Rgt, Rgz, tau0);
-//  ic->setIC(f, eos);
-//  delete ic;
-// } else if (icModel == 4) {  // analytical Gubser solution
-//  ICGubser *ic = new ICGubser();
-//  ic->setIC(f, eos, tau0);
-//  delete ic;
-//  }else if(icModel==5){ // IC from GLISSANDO + rapidity dependence
-//   IcGlissando *ic = new IcGlissando(f, isInputFile.c_str(), tau0, collSystem.c_str());
-//   ic->setIC(f, eos);
-//   delete ic;
-// } else if (icModel == 6){ // SMASH IC
-//   IcPartSMASH *ic = new IcPartSMASH(f, isInputFile.c_str(), Rgt, Rgz, tau0);
-//   ic->setIC(f, eos);
-//   delete ic;
-// } else if(icModel==7){ // IC from Trento
-//   IcTrento *ic = new IcTrento(f, isInputFile.c_str(), tau0, collSystem.c_str());
-//   ic->setIC(f, eos);
-//   delete ic;
-// } else
-if(icModel==8){ // IC box mode
-   IcBox *ic = new IcBox(f, isInputFile.c_str(), proper_tau0, collSystem.c_str());
-   ic->setIC(f, eos);
-   delete ic;
- } else {
-  cout << "icModel = " << icModel << " not implemented\n";
- }
- cout << "IC done\n";
-
- // For calculating initial anisotropy without running full hydro, uncomment following line
- //f->InitialAnisotropies(tau0) ;
-
- time_t tinit = 0;
- time(&tinit);
- float diff = difftime(tinit, start);
- cout << "Init time = " << diff << " [sec]" << endl;
-
- // hydro init
- h = new Hydro(f, eos, trcoeff, tau0, dtau);
- start = 0;
- time(&start);
- // h->setNSvalues() ; // initialize viscous terms
-
-// f->initOutput(outputDir.c_str(), tau0, freezeoutOnly);
-
- bool resized = false; // flag if the grid has been resized
- double ctime; // current time, tau or t depending on the coordinate frame
- do {
-  // small tau: decrease timestep by making substeps, in order
-  // to avoid instabilities in eta direction (signal velocity ~1/tau)
-  int nSubSteps = 1;
-  #ifdef CARTESIAN
-  ctime = h->time();
-  #else
-  ctime = h->getTau();
-  #endif
-     
-//     cout << "ctime" << setw(14) << ctime << endl; // for the whole profile at given timestep
-     cout << setw(14) << ctime << "     "; // for a time profile at specifis point
-
-     
-//  while (dtau / nSubSteps >
-//         1.0 * ctime * (etamax - etamin) / (nz - 1)) {
-//   nSubSteps *= 2;  // 0.02 in "old" coordinates
-//  }
-  if(nSubSteps>1) {
-   h->setDtau(h->getDtau() / nSubSteps);
-   for (int j = 0; j < nSubSteps; j++)
-    h->performStep();
-   h->setDtau(h->getDtau() * nSubSteps);
-   cout << "timestep reduced by " << nSubSteps << endl;
-  } else
-   h->performStep();
-  #ifdef CARTESIAN
-  ctime = h->time();
-  #else
-  ctime = h->getTau();
-  #endif
-//  if (!freezeoutOnly)
-//   f->outputGnuplot(ctime);
-//  if(ctime>=tauResize and resized==false) {
-//   cout << "grid resize\n";
-//   f = expandGrid2x(h, eos, eosH, trcoeff);
-//   resized = true;
-//  }
- } while(ctime<tauMax+0.0001);
-
- end = 0;
- time(&end);
- float diff2 = difftime(end, start);
- cout << "Execution time = " << diff2 << " [sec]" << endl;
-
- delete f;
- delete h;
- delete eos;
- delete eosH;
 }

@@ -11,7 +11,7 @@ using namespace std;
 
 double minmod(double a, double b) {
  if (a * b <= 0.) return 0.;
- //	else return (a*a*b+a*b*b)/(a*a+b*b) ;
+ //    else return (a*a*b+a*b*b)/(a*a+b*b) ;
  if (fabs(a) > fabs(b))
   return b;
  else
@@ -32,20 +32,20 @@ int index44(const int &i, const int &j) {
 
 Cell::Cell() {
  for (int i = 0; i < 7; i++) {
-  Q[i] = 0.;
-  Qh[i] = 0.;
-  Qprev[i] = 0.;
-  Q0[i] = 0.;
-  Qh0[i] = 0.;
-  Q0prev[i] = 0.;
-  flux[i] = 0.;
+  d_Q[i] = 0.;
+  d_Qh[i] = 0.;
+  d_Qprev[i] = 0.;
+  Q_bck[i] = 0.;
+  Qh_bck[i] = 0.;
+  Qprev_bck[i] = 0.;
+  d_flux[i] = 0.;
  }
  viscCorrCut = 1.;
  for (int i = 0; i < 10; i++) {
-  pi[i] = 0.0;
-  piH[i] = 0.0;
-  pi0[i] = 0.0;
-  piH0[i] = 0.0;
+  d_pi[i] = 0.0;
+  d_piH[i] = 0.0;
+  d_pi0[i] = 0.0;
+  d_piH0[i] = 0.0;
   pi_bck[i] = 0.0;
   piH_bck[i] = 0.0;
   pi0_bck[i] = 0.0;
@@ -55,10 +55,10 @@ Cell::Cell() {
   pi0_bck_prev[i] = 0.0;
   piH0_bck_prev[i] = 0.0;
  }
- Pi = 0.0;
- PiH = 0.0;
- Pi0 = 0.0;
- PiH0 = 0.0;
+ d_Pi = 0.0;
+ d_PiH = 0.0;
+ d_Pi0 = 0.0;
+ d_PiH0 = 0.0;
  Pi_bck = 0.0;
  PiH_bck = 0.0;
  Pi0_bck = 0.0;
@@ -71,15 +71,15 @@ Cell::Cell() {
 }
 
 void Cell::importVars(Cell* c) {
- c->getQ(Q);
- c->getQh(Qh);
- c->getQprev(Qprev); // not necessary but for consistency
- Pi = c->getPi();
- PiH = c->getPiH();
+ c->getQ(d_Q);
+ c->getQh(d_Qh);
+ c->getQprev(d_Qprev); // not necessary but for consistency
+ d_Pi = c->getPi();
+ d_PiH = c->getPiH();
  for(int i=0; i<4; i++)
  for(int j=0; j<4; j++) {
-  pi[index44(i, j)] = c->getpi(i, j);
-  piH[index44(i, j)] = c->getpiH(i, j); // not necessary either
+  d_pi[index44(i, j)] = c->getpi(i, j);
+  d_piH[index44(i, j)] = c->getpiH(i, j); // not necessary either
  }
  for(int i=X_; i<=Z_; i++)
   m[i-1] = c->getM(i);
@@ -87,36 +87,36 @@ void Cell::importVars(Cell* c) {
 }
 
 void Cell::updateByFlux() {
- if(Q0[0]+Q[0]+flux[0]<0.) // modified condition
+ if(Q_bck[0]+d_Q[0]+d_flux[0]<0.) // modified condition
   return;
- for (int i = 0; i < 7; i++) Q[i] += flux[i];
+ for (int i = 0; i < 7; i++) d_Q[i] += d_flux[i];
 }
 
 void Cell::updateByViscFlux() {
- if(fabs(flux[0]) <= fabs(0.5*Q[0])) { // modified condition - an absolute value was added
-  for (int i = 0; i < 7; i++) Q[i] += flux[i];
- } else if (flux[0]!=0.){
-  double fac;
-  fac = fabs(0.5*Q[0]/flux[0]);
-  for (int i = 0; i < 7; i++) Q[i] += fac*flux[i];
- }
+// if(fabs(flux[0]) <= fabs(0.5*Q[0])) { // modified condition - an absolute value was added
+  for (int i = 0; i < 7; i++) d_Q[i] += d_flux[i];
+// } else if (flux[0]!=0.){
+//  double fac;
+//  fac = fabs(0.5*Q[0]/flux[0]);
+//  for (int i = 0; i < 7; i++) Q[i] += fac*flux[i];
+// }
 }
 
 void Cell::updateQtoQhByFlux() {
- for (int i = 0; i < 7; i++) Qh[i] = Q[i] + flux[i];
+ for (int i = 0; i < 7; i++) d_Qh[i] = d_Q[i] + d_flux[i];
 }
 
-void Cell::getPrimVar(EoS *eos, double tau, double &_e, double &_p, double &_nb,
-                      double &_nq, double &_ns, double &_vx, double &_vy,
-                      double &_vz, double e_0, double p_0, double nb_0, double nq_0, double ns_0, double vx_0, double vy_0, double vz_0) {
-    double _Q[7];
-//    double _Q0[7];
+void Cell::getPrimVar(EoS *eos, double tau, double &_d_e, double &_d_p, double &_d_nb,
+                      double &_d_nq, double &_d_ns, double &_d_vx, double &_d_vy,
+                      double &_d_vz, double e_bck, double p_bck, double nb_bck, double nq_bck, double ns_bck, double vx_bck, double vy_bck, double vz_bck) {
+    double _d_Q[7];
+//    double _Q_bck[7];
     for (int i = 0; i < 7; i++) {
-        _Q[i] = Q[i] / tau;
-//        _Q0[i] = Q0[i] / tau;
+        _d_Q[i] = d_Q[i] / tau;
+//        _Q_bck[i] = Q_bck[i] / tau;
     }
-// transformPVQ0(eos, _Q0, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0);
- transformPV(eos, _Q, _e, _p, _nb, _nq, _ns, _vx, _vy, _vz, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0 );
+// transformPVQbck(eos, _Qbck, e_bck, p_bck, nb_bck, nq_bck, ns_bck, vx_bck, vy_bck, vz_bck);
+ transformPV(eos, _d_Q, _d_e, _d_p, _d_nb, _d_nq, _d_ns, _d_vx, _d_vy, _d_vz, e_bck, p_bck, nb_bck, nq_bck, ns_bck, vx_bck, vy_bck, vz_bck );
  //-------------------- debug ---------------
  #ifdef NAN_DEBUG
  if (std::isinf(_nb) or std::isnan(_nb)) {
@@ -126,12 +126,12 @@ void Cell::getPrimVar(EoS *eos, double tau, double &_e, double &_p, double &_nb,
  #endif
  //------------------------------------------
 }
-void Cell::getPrimVarQ0(EoS *eos, double tau, double &_e, double &_p, double &_nb,
+void Cell::getPrimVarQbck(EoS *eos, double tau, double &_e, double &_p, double &_nb,
                       double &_nq, double &_ns, double &_vx, double &_vy,
                       double &_vz) {
- double _Q0[7];
- for (int i = 0; i < 7; i++) _Q0[i] = Q0[i] / tau;
- transformPVQ0(eos, _Q0, _e, _p, _nb, _nq, _ns, _vx, _vy, _vz);
+ double _Q_bck[7];
+ for (int i = 0; i < 7; i++) _Q_bck[i] = Q_bck[i] / tau;
+ transformPVQbck(eos, _Q_bck, _e, _p, _nb, _nq, _ns, _vx, _vy, _vz);
  //-------------------- debug ---------------
  #ifdef NAN_DEBUG
  if (std::isinf(_nb) or std::isnan(_nb)) {
@@ -142,28 +142,28 @@ void Cell::getPrimVarQ0(EoS *eos, double tau, double &_e, double &_p, double &_n
  //------------------------------------------
 }
 
-void Cell::getPrimVarLeft(EoS *eos, double tau, double &_e, double &_p,
-                          double &_nb, double &_nq, double &_ns, double &_vx,
-                          double &_vy, double &_vz, int dir, double e_0, double p_0, double nb_0, double nq_0, double ns_0, double vx_0, double vy_0, double vz_0) {
-    double Qr[7], Ql[7], dQ[7];
-//    double Q0r[7], Ql0[7], dQ0[7];
+void Cell::getPrimVarLeft(EoS *eos, double tau, double &_d_e, double &_d_p,
+                          double &_d_nb, double &_d_nq, double &_d_ns, double &_d_vx,
+                          double &_d_vy, double &_d_vz, int dir, double e_bck, double p_bck, double nb_bck, double nq_bck, double ns_bck, double vx_bck, double vy_bck, double vz_bck) {
+    double d_Qr[7], d_Ql[7], d_dQ[7];
+//    double Qr_bck[7], Ql0[7], dQ_bck[7];
 
-    next[dir - 1]->getQ(Qr);
-    prev[dir - 1]->getQ(Ql);
-//    next[dir - 1]->getQ0(Q0r);
-//    prev[dir - 1]->getQ0(Ql0);
+    next[dir - 1]->getQ(d_Qr);
+    prev[dir - 1]->getQ(d_Ql);
+//    next[dir - 1]->getQbck(Qr_bck);
+//    prev[dir - 1]->getQbck(Ql0);
 
     for (int i = 0; i < 7; i++){
-        dQ[i] = minmod((Qr[i] - Q[i]) / 2., (Q[i] - Ql[i]) / 2.);
-//        dQ0[i] = minmod((Q0r[i] - Q0[i]) / 2., (Q0[i] - Ql0[i]) / 2.);
+        d_dQ[i] = minmod((d_Qr[i] - d_Q[i]) / 2., (d_Q[i] - d_Ql[i]) / 2.);
+//        dQ_bck[i] = minmod((Qr_bck[i] - Q_bck[i]) / 2., (Q_bck[i] - Ql0[i]) / 2.);
     }
 
     for (int i = 0; i < 7; i++){
-        Ql[i] = (Q[i] - dQ[i]) / tau;
-//        Ql0[i] = (Q0[i] - dQ0[i]) / tau;
+        d_Ql[i] = (d_Q[i] - d_dQ[i]) / tau;
+//        Ql0[i] = (Q_bck[i] - dQ_bck[i]) / tau;
     }
-// transformPVQ0(eos, Ql0, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0 );
- transformPV(eos, Ql, _e, _p, _nb, _nq, _ns, _vx, _vy, _vz, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0  );
+// transformPVQbck(eos, Ql0, e_bck, p_bck, nb_bck, nq_bck, ns_bck, vx_bck, vy_bck, vz_bck );
+ transformPV(eos, d_Ql, _d_e, _d_p, _d_nb, _d_nq, _d_ns, _d_vx, _d_vy, _d_vz, e_bck, p_bck, nb_bck, nq_bck, ns_bck, vx_bck, vy_bck, vz_bck  );
  //-------------------- debug ---------------
  #ifdef NAN_DEBUG
  if (std::isinf(_nb) or std::isnan(_nb)) {
@@ -175,19 +175,19 @@ void Cell::getPrimVarLeft(EoS *eos, double tau, double &_e, double &_p,
  #endif
  //------------------------------------------
 }
-void Cell::getPrimVarLeftQ0(EoS *eos, double tau, double &_e, double &_p,
+void Cell::getPrimVarLeftQbck(EoS *eos, double tau, double &_e, double &_p,
                           double &_nb, double &_nq, double &_ns, double &_vx,
                           double &_vy, double &_vz, int dir) {
- double Qr0[7], Ql0[7], dQ0[7];
+ double Qr_bck[7], Ql_bck[7], dQ_bck[7];
 
- next[dir - 1]->getQ0(Qr0);
- prev[dir - 1]->getQ0(Ql0);
+ next[dir - 1]->getQbck(Qr_bck);
+ prev[dir - 1]->getQbck(Ql_bck);
 
  for (int i = 0; i < 7; i++)
-  dQ0[i] = minmod((Qr0[i] - Q0[i]) / 2., (Q0[i] - Ql0[i]) / 2.);
+  dQ_bck[i] = minmod((Qr_bck[i] - Q_bck[i]) / 2., (Q_bck[i] - Ql_bck[i]) / 2.);
 
- for (int i = 0; i < 7; i++) Ql0[i] = (Q0[i] - dQ0[i]) / tau;
- transformPVQ0(eos, Ql0, _e, _p, _nb, _nq, _ns, _vx, _vy, _vz);
+ for (int i = 0; i < 7; i++) Ql_bck[i] = (Q_bck[i] - dQ_bck[i]) / tau;
+ transformPVQbck(eos, Ql_bck, _e, _p, _nb, _nq, _ns, _vx, _vy, _vz);
  //-------------------- debug ---------------
  #ifdef NAN_DEBUG
  if (std::isinf(_nb) or std::isnan(_nb)) {
@@ -200,28 +200,28 @@ void Cell::getPrimVarLeftQ0(EoS *eos, double tau, double &_e, double &_p,
  //------------------------------------------
 }
 
-void Cell::getPrimVarRight(EoS *eos, double tau, double &_e, double &_p,
-                           double &_nb, double &_nq, double &_ns, double &_vx,
-                           double &_vy, double &_vz, int dir, double e_0, double p_0, double nb_0, double nq_0, double ns_0, double vx_0, double vy_0, double vz_0) {
-    double Qr[7], Ql[7], dQ[7];
-//    double Q0r[7], Q0l[7], dQ0[7];
+void Cell::getPrimVarRight(EoS *eos, double tau, double &_d_e, double &_d_p,
+                           double &_d_nb, double &_d_nq, double &_d_ns, double &_d_vx,
+                           double &_d_vy, double &_d_vz, int dir, double e_bck, double p_bck, double nb_bck, double nq_bck, double ns_bck, double vx_bck, double vy_bck, double vz_bck) {
+    double d_Qr[7], d_Ql[7], d_dQ[7];
+//    double Qr_bck[7], Ql_bck[7], dQ_bck[7];
 
-    next[dir - 1]->getQ(Qr);
-    prev[dir - 1]->getQ(Ql);
-//    next[dir - 1]->getQ0(Q0r);
-//    prev[dir - 1]->getQ0(Q0l);
+    next[dir - 1]->getQ(d_Qr);
+    prev[dir - 1]->getQ(d_Ql);
+//    next[dir - 1]->getQbck(Qr_bck);
+//    prev[dir - 1]->getQbck(Ql_bck);
 
     for (int i = 0; i < 7; i++){
-        dQ[i] = minmod((Qr[i] - Q[i]) / 2., (Q[i] - Ql[i]) / 2.);
-//        dQ0[i] = minmod((Q0r[i] - Q0[i]) / 2., (Q0[i] - Q0l[i]) / 2.);
+        d_dQ[i] = minmod((d_Qr[i] - d_Q[i]) / 2., (d_Q[i] - d_Ql[i]) / 2.);
+//        dQ_bck[i] = minmod((Qr_bck[i] - Q_bck[i]) / 2., (Q_bck[i] - Ql_bck[i]) / 2.);
     }
 
     for (int i = 0; i < 7; i++){
-        Qr[i] = (Q[i] + dQ[i]) / tau;
-//        Q0r[i] = (Q0[i] + dQ0[i]) / tau;
+        d_Qr[i] = (d_Q[i] + d_dQ[i]) / tau;
+//        Qr_bck[i] = (Q_bck[i] + dQ_bck[i]) / tau;
     }
-//    transformPVQ0(eos, Q0r, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0 );
-    transformPV(eos, Qr, _e, _p, _nb, _nq, _ns, _vx, _vy, _vz, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0  );
+//    transformPVQbck(eos, Qr_bck, e_bck, p_bck, nb_bck, nq_bck, ns_bck, vx_bck, vy_bck, vz_bck );
+    transformPV(eos, d_Qr, _d_e, _d_p, _d_nb, _d_nq, _d_ns, _d_vx, _d_vy, _d_vz, e_bck, p_bck, nb_bck, nq_bck, ns_bck, vx_bck, vy_bck, vz_bck  );
 //-------------------- debug ---------------
  #ifdef NAN_DEBUG
  if (std::isinf(_nb) or std::isnan(_nb)) {
@@ -233,19 +233,19 @@ void Cell::getPrimVarRight(EoS *eos, double tau, double &_e, double &_p,
  #endif
  //------------------------------------------
 }
-void Cell::getPrimVarRightQ0(EoS *eos, double tau, double &_e, double &_p,
+void Cell::getPrimVarRightQbck(EoS *eos, double tau, double &_e, double &_p,
                            double &_nb, double &_nq, double &_ns, double &_vx,
                            double &_vy, double &_vz, int dir) {
- double Qr0[7], Ql0[7], dQ0[7];
+ double Qr_bck[7], Ql_bck[7], dQ_bck[7];
 
- next[dir - 1]->getQ0(Qr0);
- prev[dir - 1]->getQ0(Ql0);
+ next[dir - 1]->getQbck(Qr_bck);
+ prev[dir - 1]->getQbck(Ql_bck);
 
  for (int i = 0; i < 7; i++)
-  dQ0[i] = minmod((Qr0[i] - Q0[i]) / 2., (Q0[i] - Ql0[i]) / 2.);
+  dQ_bck[i] = minmod((Qr_bck[i] - Q_bck[i]) / 2., (Q_bck[i] - Ql_bck[i]) / 2.);
 
- for (int i = 0; i < 7; i++) Qr0[i] = (Q0[i] + dQ0[i]) / tau;
- transformPVQ0(eos, Qr0, _e, _p, _nb, _nq, _ns, _vx, _vy, _vz);
+ for (int i = 0; i < 7; i++) Qr_bck[i] = (Q_bck[i] + dQ_bck[i]) / tau;
+ transformPVQbck(eos, Qr_bck, _e, _p, _nb, _nq, _ns, _vx, _vy, _vz);
  //-------------------- debug ---------------
  #ifdef NAN_DEBUG
  if (std::isinf(_nb) or std::isnan(_nb)) {
@@ -258,32 +258,32 @@ void Cell::getPrimVarRightQ0(EoS *eos, double tau, double &_e, double &_p,
  //------------------------------------------
 }
 
-void Cell::getPrimVarHLeft(EoS *eos, double tau, double &_e, double &_p,
-                           double &_nb, double &_nq, double &_ns, double &_vx,
-                           double &_vy, double &_vz, int dir, double e_0, double p_0, double nb_0, double nq_0, double ns_0, double vx_0, double vy_0, double vz_0) {
-    double Qr[7], Ql[7], dQ[7];
-//    double Q0r[7], Q0l[7], dQ0[7];
+void Cell::getPrimVarHLeft(EoS *eos, double tau, double &_d_e, double &_d_p,
+                           double &_d_nb, double &_d_nq, double &_d_ns, double &_d_vx,
+                           double &_d_vy, double &_d_vz, int dir, double e_bck, double p_bck, double nb_bck, double nq_bck, double ns_bck, double vx_bck, double vy_bck, double vz_bck) {
+    double d_Qr[7], d_Ql[7], d_dQ[7];
+//    double Qr_bck[7], Ql_bck[7], dQ_bck[7];
 
-    next[dir - 1]->getQh(Qr);
-    prev[dir - 1]->getQh(Ql);
-//    next[dir - 1]->getQh0(Q0r);
-//    prev[dir - 1]->getQh0(Q0l);
-//    next[dir - 1]->getQ0(Q0r);
-//    prev[dir - 1]->getQ0(Q0l);
+    next[dir - 1]->getQh(d_Qr);
+    prev[dir - 1]->getQh(d_Ql);
+//    next[dir - 1]->getQh0(Qr_bck);
+//    prev[dir - 1]->getQh0(Ql_bck);
+//    next[dir - 1]->getQbck(Qr_bck);
+//    prev[dir - 1]->getQbck(Ql_bck);
 
     for (int i = 0; i < 7; i++){
-        dQ[i] = minmod((Qr[i] - Qh[i]) / 2., (Qh[i] - Ql[i]) / 2.);
-//        dQ0[i] = minmod((Q0r[i] - Qh0[i]) / 2., (Qh0[i] - Q0l[i]) / 2.);
-//        dQ0[i] = minmod((Q0r[i] - Q0[i]) / 2., (Q0[i] - Q0l[i]) / 2.);
+        d_dQ[i] = minmod((d_Qr[i] - d_Qh[i]) / 2., (d_Qh[i] - d_Ql[i]) / 2.);
+//        dQ_bck[i] = minmod((Qr_bck[i] - Qh0[i]) / 2., (Qh0[i] - Ql_bck[i]) / 2.);
+//        dQ_bck[i] = minmod((Qr_bck[i] - Q_bck[i]) / 2., (Q_bck[i] - Ql_bck[i]) / 2.);
     }
 
     for (int i = 0; i < 7; i++){
-        Ql[i] = (Qh[i] - dQ[i]) / tau;
-//        Q0l[i] = (Qh0[i] - dQ0[i]) / tau;
-//        Q0l[i] = (Q0[i] - dQ0[i]) / tau;
+        d_Ql[i] = (d_Qh[i] - d_dQ[i]) / tau;
+//        Ql_bck[i] = (Qh0[i] - dQ_bck[i]) / tau;
+//        Ql_bck[i] = (Q_bck[i] - dQ_bck[i]) / tau;
     }
-//    transformPVQ0(eos, Q0l, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0 );
-    transformPV(eos, Ql, _e, _p, _nb, _nq, _ns, _vx, _vy, _vz, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0  ); //-------------------- debug ---------------
+//    transformPVQbck(eos, Ql_bck, e_bck, p_bck, nb_bck, nq_bck, ns_bck, vx_bck, vy_bck, vz_bck );
+    transformPV(eos, d_Ql, _d_e, _d_p, _d_nb, _d_nq, _d_ns, _d_vx, _d_vy, _d_vz, e_bck, p_bck, nb_bck, nq_bck, ns_bck, vx_bck, vy_bck, vz_bck  ); //-------------------- debug ---------------
  #ifdef NAN_DEBUG
  if (std::isinf(_nb) or std::isnan(_nb)) {
   cout << "---error in getPrimVarHLeft:\n";
@@ -295,26 +295,26 @@ void Cell::getPrimVarHLeft(EoS *eos, double tau, double &_e, double &_p,
  //------------------------------------------
 }
 
-void Cell::getPrimVarHLeftQ0(EoS *eos, double tau, double &_e, double &_p,
+void Cell::getPrimVarHLeftQbck(EoS *eos, double tau, double &_e, double &_p,
                            double &_nb, double &_nq, double &_ns, double &_vx,
                            double &_vy, double &_vz, int dir) {
- double Q0r[7], Q0l[7], dQ0[7];
+ double Qr_bck[7], Ql_bck[7], dQ_bck[7];
 
-//    next[dir - 1]->getQh0(Q0r);
-//    prev[dir - 1]->getQh0(Q0l);
-    next[dir - 1]->getQ0(Q0r);
-    prev[dir - 1]->getQ0(Q0l);
+//    next[dir - 1]->getQh0(Qr_bck);
+//    prev[dir - 1]->getQh0(Ql_bck);
+    next[dir - 1]->getQbck(Qr_bck);
+    prev[dir - 1]->getQbck(Ql_bck);
 
     for (int i = 0; i < 7; i++){
-//        dQ0[i] = minmod((Q0r[i] - Qh0[i]) / 2., (Qh0[i] - Q0l[i]) / 2.);
-        dQ0[i] = minmod((Q0r[i] - Q0[i]) / 2., (Q0[i] - Q0l[i]) / 2.);
+//        dQ_bck[i] = minmod((Qr_bck[i] - Qh0[i]) / 2., (Qh0[i] - Ql_bck[i]) / 2.);
+        dQ_bck[i] = minmod((Qr_bck[i] - Q_bck[i]) / 2., (Q_bck[i] - Ql_bck[i]) / 2.);
     }
 
     for (int i = 0; i < 7; i++){
-//        Q0l[i] = (Qh0[i] - dQ0[i]) / tau;
-        Q0l[i] = (Q0[i] - dQ0[i]) / tau;
+//        Ql_bck[i] = (Qh0[i] - dQ_bck[i]) / tau;
+        Ql_bck[i] = (Q_bck[i] - dQ_bck[i]) / tau;
     }
-    transformPVQ0(eos, Q0l, _e, _p, _nb, _nq, _ns, _vx, _vy, _vz );
+    transformPVQbck(eos, Ql_bck, _e, _p, _nb, _nq, _ns, _vx, _vy, _vz );
 //-------------------- debug ---------------
  #ifdef NAN_DEBUG
  if (std::isinf(_nb) or std::isnan(_nb)) {
@@ -327,32 +327,32 @@ void Cell::getPrimVarHLeftQ0(EoS *eos, double tau, double &_e, double &_p,
  //------------------------------------------
 }
 
-void Cell::getPrimVarHRight(EoS *eos, double tau, double &_e, double &_p,
-                            double &_nb, double &_nq, double &_ns, double &_vx,
-                            double &_vy, double &_vz, int dir, double e_0, double p_0, double nb_0, double nq_0, double ns_0, double vx_0, double vy_0, double vz_0) {
-    double Qr[7], Ql[7], dQ[7];
-//    double Q0r[7], Q0l[7], dQ0[7];
+void Cell::getPrimVarHRight(EoS *eos, double tau, double &_d_e, double &_d_p,
+                            double &_d_nb, double &_d_nq, double &_d_ns, double &_d_vx,
+                            double &_d_vy, double &_d_vz, int dir, double e_bck, double p_bck, double nb_bck, double nq_bck, double ns_bck, double vx_bck, double vy_bck, double vz_bck) {
+    double d_Qr[7], d_Ql[7], d_dQ[7];
+//    double Qr_bck[7], Ql_bck[7], dQ_bck[7];
 
-    next[dir - 1]->getQh(Qr);
-    prev[dir - 1]->getQh(Ql);
-//    next[dir - 1]->getQh0(Q0r);
-//    prev[dir - 1]->getQh0(Q0l);
-//    next[dir - 1]->getQ0(Q0r);
-//    prev[dir - 1]->getQ0(Q0l);
+    next[dir - 1]->getQh(d_Qr);
+    prev[dir - 1]->getQh(d_Ql);
+//    next[dir - 1]->getQh0(Qr_bck);
+//    prev[dir - 1]->getQh0(Ql_bck);
+//    next[dir - 1]->getQbck(Qr_bck);
+//    prev[dir - 1]->getQbck(Ql_bck);
 
     for (int i = 0; i < 7; i++){
-        dQ[i] = minmod((Qr[i] - Qh[i]) / 2., (Qh[i] - Ql[i]) / 2.);
-//        dQ0[i] = minmod((Q0r[i] - Qh0[i]) / 2., (Qh0[i] - Q0l[i]) / 2.);
-//        dQ0[i] = minmod((Q0r[i] - Q0[i]) / 2., (Q0[i] - Q0l[i]) / 2.);
+        d_dQ[i] = minmod((d_Qr[i] - d_Qh[i]) / 2., (d_Qh[i] - d_Ql[i]) / 2.);
+//        dQ_bck[i] = minmod((Qr_bck[i] - Qh0[i]) / 2., (Qh0[i] - Ql_bck[i]) / 2.);
+//        dQ_bck[i] = minmod((Qr_bck[i] - Q_bck[i]) / 2., (Q_bck[i] - Ql_bck[i]) / 2.);
     }
 
     for (int i = 0; i < 7; i++){
-        Qr[i] = (Qh[i] + dQ[i]) / tau;
-//        Q0r[i] = (Qh0[i] + dQ0[i]) / tau;
-//        Q0r[i] = (Q0[i] + dQ0[i]) / tau;
+        d_Qr[i] = (d_Qh[i] + d_dQ[i]) / tau;
+//        Qr_bck[i] = (Qh0[i] + dQ_bck[i]) / tau;
+//        Qr_bck[i] = (Q_bck[i] + dQ_bck[i]) / tau;
     }
-//    transformPVQ0(eos, Q0r, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0 );
-    transformPV(eos, Qr, _e, _p, _nb, _nq, _ns, _vx, _vy, _vz, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0  );
+//    transformPVQbck(eos, Qr_bck, e_bck, p_bck, nb_bck, nq_bck, ns_bck, vx_bck, vy_bck, vz_bck );
+    transformPV(eos, d_Qr, _d_e, _d_p, _d_nb, _d_nq, _d_ns, _d_vx, _d_vy, _d_vz, e_bck, p_bck, nb_bck, nq_bck, ns_bck, vx_bck, vy_bck, vz_bck  );
 //-------------------- debug ---------------
  #ifdef NAN_DEBUG
  if (std::isinf(_nb) or std::isnan(_nb)) {
@@ -365,26 +365,26 @@ void Cell::getPrimVarHRight(EoS *eos, double tau, double &_e, double &_p,
  //------------------------------------------
 }
 
-void Cell::getPrimVarHRightQ0(EoS *eos, double tau, double &_e, double &_p,
+void Cell::getPrimVarHRightQbck(EoS *eos, double tau, double &_e, double &_p,
                             double &_nb, double &_nq, double &_ns, double &_vx,
                             double &_vy, double &_vz, int dir) {
- double Q0r[7], Q0l[7], dQ0[7];
+ double Qr_bck[7], Ql_bck[7], dQ_bck[7];
 
-//    next[dir - 1]->getQh0(Q0r);
-//    prev[dir - 1]->getQh0(Q0l);
-    next[dir - 1]->getQ0(Q0r);
-    prev[dir - 1]->getQ0(Q0l);
+//    next[dir - 1]->getQh0(Qr_bck);
+//    prev[dir - 1]->getQh0(Ql_bck);
+    next[dir - 1]->getQbck(Qr_bck);
+    prev[dir - 1]->getQbck(Ql_bck);
 
     for (int i = 0; i < 7; i++){
-//        dQ0[i] = minmod((Q0r[i] - Qh0[i]) / 2., (Qh0[i] - Q0l[i]) / 2.);
-        dQ0[i] = minmod((Q0r[i] - Q0[i]) / 2., (Q0[i] - Q0l[i]) / 2.);
+//        dQ_bck[i] = minmod((Qr_bck[i] - Qh0[i]) / 2., (Qh0[i] - Ql_bck[i]) / 2.);
+        dQ_bck[i] = minmod((Qr_bck[i] - Q_bck[i]) / 2., (Q_bck[i] - Ql_bck[i]) / 2.);
     }
 
     for (int i = 0; i < 7; i++){
-//        Q0r[i] = (Qh0[i] + dQ0[i]) / tau;
-        Q0r[i] = (Q0[i] + dQ0[i]) / tau;
+//        Qr_bck[i] = (Qh0[i] + dQ_bck[i]) / tau;
+        Qr_bck[i] = (Q_bck[i] + dQ_bck[i]) / tau;
     }
-    transformPVQ0(eos, Q0r, _e, _p, _nb, _nq, _ns, _vx, _vy, _vz );
+    transformPVQbck(eos, Qr_bck, _e, _p, _nb, _nq, _ns, _vx, _vy, _vz );
 //-------------------- debug ---------------
  #ifdef NAN_DEBUG
  if (std::isinf(_nb) or std::isnan(_nb)) {
@@ -398,91 +398,91 @@ void Cell::getPrimVarHRightQ0(EoS *eos, double tau, double &_e, double &_p,
 }
 
 
-void Cell::getPrimVarHCenter(EoS *eos, double tau, double &_e, double &_p,
-                             double &_nb, double &_nq, double &_ns, double &_vx,
-                             double &_vy, double &_vz, double e_0, double p_0, double nb_0, double nq_0, double ns_0, double vx_0, double vy_0, double vz_0) {
-    double _Q[7];
-//    double _Q0[7];
+void Cell::getPrimVarHCenter(EoS *eos, double tau, double &_d_e, double &_d_p,
+                             double &_d_nb, double &_d_nq, double &_d_ns, double &_d_vx,
+                             double &_d_vy, double &_d_vz, double e_bck, double p_bck, double nb_bck, double nq_bck, double ns_bck, double vx_bck, double vy_bck, double vz_bck) {
+    double _d_Q[7];
+//    double _Q_bck[7];
     for (int i = 0; i < 7; i++){
-        _Q[i] = Qh[i] / tau;
-//        _Q0[i] = Qh0[i] / tau;
-//        _Q0[i] = Q0[i] / tau;
+        _d_Q[i] = d_Qh[i] / tau;
+//        _Q_bck[i] = Qh0[i] / tau;
+//        _Q_bck[i] = Q_bck[i] / tau;
     }
-//    transformPVQ0(eos, _Q0, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0 );
-    transformPV(eos, _Q, _e, _p, _nb, _nq, _ns, _vx, _vy, _vz, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0  );
+//    transformPVQbck(eos, _Qbck, e_bck, p_bck, nb_bck, nq_bck, ns_bck, vx_bck, vy_bck, vz_bck );
+    transformPV(eos, _d_Q, _d_e, _d_p, _d_nb, _d_nq, _d_ns, _d_vx, _d_vy, _d_vz, e_bck, p_bck, nb_bck, nq_bck, ns_bck, vx_bck, vy_bck, vz_bck  );
 }
 
-void Cell::getPrimVarHCenterQ0(EoS *eos, double tau, double &_e, double &_p,
+void Cell::getPrimVarHCenterQbck(EoS *eos, double tau, double &_e, double &_p,
                              double &_nb, double &_nq, double &_ns, double &_vx,
                              double &_vy, double &_vz) {
- double _Q0[7];
+ double _Q_bck[7];
     for (int i = 0; i < 7; i++){
-//        _Q0[i] = Qh0[i] / tau;
-        _Q0[i] = Q0[i] / tau;
+//        _Q_bck[i] = Qh0[i] / tau; -toto !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        _Q_bck[i] = Q_bck[i] / tau;
     }
-    transformPVQ0(eos, _Q0, _e, _p, _nb, _nq, _ns, _vx, _vy, _vz );
+    transformPVQbck(eos, _Q_bck, _e, _p, _nb, _nq, _ns, _vx, _vy, _vz );
 }
 
-void Cell::getPrimVarPrev(EoS *eos, double tau, double &_e, double &_p,
-                          double &_nb, double &_nq, double &_ns, double &_vx,
-                          double &_vy, double &_vz, double e_0, double p_0, double nb_0, double nq_0, double ns_0, double vx_0, double vy_0, double vz_0) {
-    double _Q[7];
-//    double _Q0[7];
+void Cell::getPrimVarPrev(EoS *eos, double tau, double &_d_e, double &_d_p,
+                          double &_d_nb, double &_d_nq, double &_d_ns, double &_d_vx,
+                          double &_d_vy, double &_d_vz, double e_bck, double p_bck, double nb_bck, double nq_bck, double ns_bck, double vx_bck, double vy_bck, double vz_bck) {
+    double _d_Q[7];
+//    double _Q_bck[7];
     for (int i = 0; i < 7; i++){
-        _Q[i] = Qprev[i] / tau;
-//        _Q0[i] = Q0prev[i] / tau;
-//        _Q0[i] = Q0[i] / tau;
+        _d_Q[i] = d_Qprev[i] / tau;
+//        _Q_bck[i] = Qbckprev[i] / tau;
+//        _Q_bck[i] = Q_bck[i] / tau;
     }
-//    transformPVQ0(eos, _Q0, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0 );
-    transformPV(eos, _Q, _e, _p, _nb, _nq, _ns, _vx, _vy, _vz, e_0, p_0, nb_0, nq_0, ns_0, vx_0, vy_0, vz_0  );
+//    transformPVQbck(eos, _Qbck, e_bck, p_bck, nb_bck, nq_bck, ns_bck, vx_bck, vy_bck, vz_bck );
+    transformPV(eos, _d_Q, _d_e, _d_p, _d_nb, _d_nq, _d_ns, _d_vx, _d_vy, _d_vz, e_bck, p_bck, nb_bck, nq_bck, ns_bck, vx_bck, vy_bck, vz_bck  );
 }
 
-void Cell::getPrimVarPrevQ0(EoS *eos, double tau, double &_e, double &_p,
+void Cell::getPrimVarPrevQbck(EoS *eos, double tau, double &_e, double &_p,
                           double &_nb, double &_nq, double &_ns, double &_vx,
                           double &_vy, double &_vz) {
- double _Q0[7];
+ double _Q_bck[7];
     for (int i = 0; i < 7; i++){
-//        _Q0[i] = Q0prev[i] / tau;
-        _Q0[i] = Q0[i] / tau;
+//        _Q_bck[i] = Qbckprev[i] / tau; -toto !!!!!!!!!!!!!!!!!!!!!!
+        _Q_bck[i] = Q_bck[i] / tau;
     }
-    transformPVQ0(eos, _Q0, _e, _p, _nb, _nq, _ns, _vx, _vy, _vz );
+    transformPVQbck(eos, _Q_bck, _e, _p, _nb, _nq, _ns, _vx, _vy, _vz );
 }
 // setting of fluctuating variables
-void Cell::setPrimVar(EoS *eos, double tau, double _e, double _nb, double _nq,
-                      double _ns, double _vx, double _vy, double _vz, double e0, double vx0, double vy0, double vz0) {
- const double gamma0 = 1. / sqrt(1 - vx0 * vx0 - vy0 * vy0 - vz0 * vz0);
- double p0 = eos->p(e0, _nb, _nq, _ns); // background pressure
- const double p = eos->p(_e+e0, _nb, _nq, _ns) - eos->p(e0, _nb, _nq, _ns); // fluctuation of pressure - will this work even for non-linear EOS?
- Q[T_] = tau * ( (_e + p) * gamma0 * gamma0 - p );
- Q[X_] = tau * ( (e0 + p0) * gamma0 * _vx + (_e + p) * gamma0 * gamma0 * vx0 );
- Q[Y_] = tau * ( (e0 + p0) * gamma0 * _vy + (_e + p) * gamma0 * gamma0 * vy0 );
- Q[Z_] = tau * ( (e0 + p0) * gamma0 * _vz + (_e + p) * gamma0 * gamma0 * vz0 );
- Q[NB_] = tau * _nb * gamma0; // not linearized
- Q[NQ_] = tau * _nq * gamma0; // not linearized
- Q[NS_] = tau * _ns * gamma0; // not linearized
- if (std::isinf(Q[NB_]) or std::isnan(Q[NB_])) {
+void Cell::setPrimVar(EoS *eos, double tau, double _d_e, double _nb, double _nq,
+                      double _ns, double _d_vx, double _d_vy, double _d_vz, double e_bck, double vx_bck, double vy_bck, double vz_bck) {
+ const double gamma_bck = 1. / sqrt(1 - vx_bck * vx_bck - vy_bck * vy_bck - vz_bck * vz_bck);
+ double p_bck = eos->p(e_bck, _nb, _nq, _ns); // background pressure
+ const double d_p = eos->p(_d_e+e_bck, _nb, _nq, _ns) - eos->p(e_bck, _nb, _nq, _ns); // fluctuation of pressure - will this work even for non-linear EOS?
+ d_Q[T_] = tau * ( (_d_e + d_p) * gamma_bck * gamma_bck - d_p );
+ d_Q[X_] = tau * ( (e_bck + p_bck) * gamma_bck * _d_vx + (_d_e + d_p) * gamma_bck * gamma_bck * vx_bck );
+ d_Q[Y_] = tau * ( (e_bck + p_bck) * gamma_bck * _d_vy + (_d_e + d_p) * gamma_bck * gamma_bck * vy_bck );
+ d_Q[Z_] = tau * ( (e_bck + p_bck) * gamma_bck * _d_vz + (_d_e + d_p) * gamma_bck * gamma_bck * vz_bck );
+ d_Q[NB_] = tau * _nb * gamma_bck; // not linearized
+ d_Q[NQ_] = tau * _nq * gamma_bck; // not linearized
+ d_Q[NS_] = tau * _ns * gamma_bck; // not linearized
+ if (std::isinf(d_Q[NB_]) or std::isnan(d_Q[NB_])) {
   cout << "init error!\n";
-  eos->p(_e, _nb, _nq, _ns);
-  cout << "e = " << _e << " p = " << p << " vx = " << _vx << " vy = " << _vy
-       << " vz = " << _vz << endl;
-  //		exit(1) ;
+  eos->p(_d_e, _nb, _nq, _ns);
+  cout << "e = " << _d_e << " p = " << d_p << " vx = " << _d_vx << " vy = " << _d_vy
+       << " vz = " << _d_vz << endl;
+  //        exit(1) ;
   return;
  }
 }
 
 // function for setting of background variables
-void Cell::setPrimVarQ0(EoS *eos, double tau, double _e, double _nb, double _nq,
+void Cell::setPrimVarQbck(EoS *eos, double tau, double _e, double _nb, double _nq,
                       double _ns, double _vx, double _vy, double _vz) {
  const double gamma2 = 1. / (1 - _vx * _vx - _vy * _vy - _vz * _vz);
  const double p = eos->p(_e, _nb, _nq, _ns);
- Q0[T_] = tau * (_e + p * (_vx * _vx + _vy * _vy + _vz * _vz)) * gamma2;
- Q0[X_] = tau * (_e + p) * _vx * gamma2;
- Q0[Y_] = tau * (_e + p) * _vy * gamma2;
- Q0[Z_] = tau * (_e + p) * _vz * gamma2;
- Q0[NB_] = tau * _nb * sqrt(gamma2);
- Q0[NQ_] = tau * _nq * sqrt(gamma2);
- Q0[NS_] = tau * _ns * sqrt(gamma2);
- if (std::isinf(Q[NB_]) or std::isnan(Q[NB_])) {
+ Q_bck[T_] = tau * (_e + p * (_vx * _vx + _vy * _vy + _vz * _vz)) * gamma2;
+ Q_bck[X_] = tau * (_e + p) * _vx * gamma2;
+ Q_bck[Y_] = tau * (_e + p) * _vy * gamma2;
+ Q_bck[Z_] = tau * (_e + p) * _vz * gamma2;
+ Q_bck[NB_] = tau * _nb * sqrt(gamma2);
+ Q_bck[NQ_] = tau * _nq * sqrt(gamma2);
+ Q_bck[NS_] = tau * _ns * sqrt(gamma2);
+ if (std::isinf(Q_bck[NB_]) or std::isnan(Q_bck[NB_])) {
   cout << "init error!\n";
   eos->p(_e, _nb, _nq, _ns);
   cout << "e = " << _e << " p = " << p << " vx = " << _vx << " vy = " << _vy
@@ -495,14 +495,14 @@ void Cell::setPrimVarQ0(EoS *eos, double tau, double _e, double _nb, double _nq,
 void Cell::Dump(double tau) {
  cout << "---------cell values dump-------\n";
  cout << setw(5) << ix << setw(5) << iy << setw(5) << iz << endl;
- cout << setw(14) << Q[0] / tau << setw(14) << Q[1] / tau << setw(14)
-      << Q[2] / tau << setw(14) << Q[3] / tau << endl;
- cout << setw(14) << Q[4] / tau << setw(14) << Q[5] / tau << setw(14)
-      << Q[6] / tau << endl;
- cout << setw(14) << Qh[0] / tau << setw(14) << Qh[1] / tau << setw(14)
-      << Qh[2] / tau << setw(14) << Qh[3] / tau << endl;
- cout << setw(14) << Qh[4] / tau << setw(14) << Qh[5] / tau << setw(14)
-      << Qh[6] / tau << endl;
+ cout << setw(14) << d_Q[0] / tau << setw(14) << d_Q[1] / tau << setw(14)
+      << d_Q[2] / tau << setw(14) << d_Q[3] / tau << endl;
+ cout << setw(14) << d_Q[4] / tau << setw(14) << d_Q[5] / tau << setw(14)
+      << d_Q[6] / tau << endl;
+ cout << setw(14) << d_Qh[0] / tau << setw(14) << d_Qh[1] / tau << setw(14)
+      << d_Qh[2] / tau << setw(14) << d_Qh[3] / tau << endl;
+ cout << setw(14) << d_Qh[4] / tau << setw(14) << d_Qh[5] / tau << setw(14)
+      << d_Qh[6] / tau << endl;
 
  cout << "--------------------------------\n";
 }
@@ -527,7 +527,7 @@ void Cell::Dump(double tau) {
 ////            dpi0[i][j][2] = 0.;
 ////            dpi0[i][j][3] = 0.;
 ////        }
-////    if (e1+e_01 <= 0. || e0+e_0 <= 0.) {  // matter-vacuum
+////    if (e1+e_bck1 <= 0. || e0+e_bck <= 0.) {  // matter-vacuum
 ////        dpi0[i][j][0] = 0.;
 ////    }
 //

@@ -6,15 +6,15 @@ etaS      0.12             !  eta/s value
 zetaS     0.0             !  zeta/s, bulk viscosity
 e_crit    0.5             !  criterion for surface finding
 
-nx        81             ! number of cells in X direction
-ny        5             ! number of cells in Y direction
-nz        5             ! number of cells in eta direction
+nx        31             ! number of cells in X direction
+ny        31             ! number of cells in Y direction
+nz        31             ! number of cells in eta direction
 xmin     -16.0            ! coordinate of the first cell
 xmax      16.0            ! coordinate of the last cell
 ymin     -16.0
 ymax      16.0
-etamin   -10.0
-etamax    10.0
+etamin   -16.0
+etamax    16.0
 
 ! icModel: 1=Glauber, 2=Glauber_table+parametrized rapidity for energy conserv. check, 4=Gubser flow
 icModel    8

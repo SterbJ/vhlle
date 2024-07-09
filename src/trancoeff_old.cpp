@@ -87,12 +87,12 @@ double TransportCoeff::etaS(double e,double rho, double T)
   }
 }
 
-void TransportCoeff::getTau(double e_bck, double d_e, double rho, double T_bck, double dT, double &_taupi, double &_d_taupi, double &_tauPi, double &_d_tauPi) {
- if (T_bck > 0.) {
-     _taupi = 5. / 5.068 * etaS(e_bck, rho, T_bck) / T_bck ; // background shear
-     _d_taupi = -5. / 5.068 * etaS(e_bck, rho, T_bck) / (T_bck * T_bck) * dT * d_e; // fluctuation shear
-     _tauPi = 6.0 / 5.068 * zetaS(e_bck, T0) / T0; // background bulk
-     _d_tauPi = -6.0 / 5.068 * zetaS(e_bck, T_bck) / (T_bck * T_bck) * dT * d_e; // fluctuation bulk
+void TransportCoeff::getTau(double e0, double e, double rho, double T0, double dT, double &_taupi, double &_delta_taupi, double &_tauPi, double &_delta_tauPi) {
+ if (T0 > 0.) {
+     _taupi = 5. / 5.068 * etaS(e0, rho, T0) / T0 ; // background shear
+     _delta_taupi = -5. / 5.068 * etaS(e0, rho, T0) / (T0 * T0) * dT * e; // fluctuation shear
+     _tauPi = 6.0 / 5.068 * zetaS(e,T0) / T0; // background bulk
+     _delta_tauPi = -6.0 / 5.068 * zetaS(e,T0) / (T0 * T0) * dT * e; // fluctuation bulk
  } else {
   _taupi = _tauPi = 0.; // maybe the fluctuations should be added here as well
  }

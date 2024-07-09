@@ -11,9 +11,12 @@ CXXFLAGS     += $(ROOTCFLAGS)
 LIBS          = $(ROOTLIBS) $(SYSLIBS)
 
 vpath %.cpp src
+vpath %.c kiss_fft130
+vpath %.c kiss_fft130/tools
+
 objdir     = obj
 
-SRC        = cll.cpp eos.cpp eo3.cpp eo1.cpp eoChiral.cpp eoHadron.cpp eoAZH.cpp eoSmash.cpp trancoeff.cpp fld.cpp hdo_box.cpp s95p.cpp icurqmd.cpp main.cpp rmn.cpp cornelius.cpp \
+SRC        = cll.cpp eos.cpp eo3.cpp eo1.cpp eoChiral.cpp eoHadron.cpp eoAZH.cpp eoSmash.cpp trancoeff.cpp fld.cpp hdo_box.cpp s95p.cpp icurqmd.cpp main.cpp rmn.cpp cornelius.cpp kiss_fft.c kiss_fftnd.c \
 			icBox.cpp
 OBJS       = $(patsubst %.cpp,$(objdir)/%.o,$(SRC))
 
@@ -32,3 +35,4 @@ $(objdir):
 
 obj/%.o : %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
+

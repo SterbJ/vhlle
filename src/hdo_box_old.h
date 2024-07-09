@@ -34,7 +34,7 @@ public:
  void visc_flux(Cell *left, Cell *right, int direction, double ix, double iy, double iz);
  // viscous source step for a given cell (ix,iy,iz)
  void visc_source_step(int ix, int iy, int iz);
- void source(double tau, double x, double y, double z, double d_Q[7],
+ void source(double tau, double x, double y, double z, double Q[7],
              double S[7]);
  // ideal source step for a given cell (ix,iy,iz)
  void source_step(int ix, int iy, int iz, int mode);
@@ -42,8 +42,8 @@ public:
  // plus \partial_\mu u^\nu matrix (dmu) and
  // expansion scalar \partial_mu u^\mu (du)
  // for a given cell (ix,iy,iz)
- void NSquant(int ix, int iy, int iz, double d_pi[][4], double &d_Pi,
-              double d_dmu[4][4], double dmu_bck[4][4], double &d_du, double &du_bck);
+ void NSquant(int ix, int iy, int iz, double pi[][4], double &Pi,
+              double dmu[4][4], double dmu0[4][4], double &du, double &du0);
  // sets the values of shear stress/bulk pressure in NS limit in all hydro grid
 // void setNSvalues();
  // advances numerical solution for shear/bulk in a whole grid over one
@@ -51,7 +51,7 @@ public:
  void ISformal();
  // advances numerical solution for Q (including ideal and viscous fluxes and
  // source terms) over one timestep
- void performStep(double ctime);
+ void performStep(double ctime, double Struc[1000][31][31][31], int event);
  // gets the current proper time
  inline double getTau() { return tau; }
  #ifdef CARTESIAN

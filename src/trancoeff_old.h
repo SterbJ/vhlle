@@ -18,7 +18,7 @@ public:
  // returns (optionally temperature dependent) eta/s and zeta/s
  void getEta(double e, double rho, double T, double &_etaS, double &_zetaS);
  // returns shear and bulk relaxation times
- void getTau(double e_bck, double d_e, double rho, double T_bck, double dT, double &_taupi, double &_d_taupi, double &_tauPi, double &_d_tauPi);
+ void getTau(double e0, double e, double rho, double T0, double dT, double &_taupi, double &_delta_taupi, double &_tauPi, double &_delta_tauPi);
  // deltapipi, taupipi, lambdapiPi * divided by tau_pi * !
  void getOther(double e, double nb, double nq, double ns,
    double &deltapipi, double &taupipi, double &lambdapiPi, double &phi7) {

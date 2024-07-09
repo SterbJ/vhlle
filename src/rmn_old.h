@@ -7,11 +7,11 @@
 // 3-velocity components vx, vy, vz
 
 //transforms background variables
-void transformPVQbck(EoS *eos, double Q[7], double &e, double &p, double &nb,
+void transformPVQ0(EoS *eos, double Q[7], double &e, double &p, double &nb,
                  double &nq, double &ns, double &vx, double &vy, double &vz);
 //transforms the fluctuations
-void transformPV(EoS *eos, double d_Q[7], double &d_e, double &d_p, double &d_nb,
-                 double &d_nq, double &d_ns, double &d_vx, double &d_vy, double &d_vz, double e_0, double p_0, double nb_0, double nq_0, double ns_0, double vx_0, double vy_0, double vz_0);
+void transformPV(EoS *eos, double Q[7], double &e, double &p, double &nb,
+                 double &nq, double &ns, double &vx, double &vy, double &vz, double e_0, double p_0, double nb_0, double nq_0, double ns_0, double vx_0, double vy_0, double vz_0);
 
 // the same, except that known bulk pressure Pi is taken into account
 //void transformPVBulk(EoS *eos, double Pi, double Q[7], double &e, double &p,

@@ -17,7 +17,7 @@
 using namespace std;
 
 IcBox::IcBox(Fluid* f, const char* filename, double _tau0, const char* setup) {
- cout << "loading BOX IC\n";
+// cout << "loading BOX IC\n";
  nx = f->getNX();
  ny = f->getNY();
  nz = f->getNZ();
@@ -56,7 +56,7 @@ IcBox::IcBox(Fluid* f, const char* filename, double _tau0, const char* setup) {
   A = 0.0 ; // 5e-4; // initial shear flow
   nsigma = 0.6;
   neta0 = 1.4;
-  cout << "IcBox: setup for 200 GeV RHIC\n";
+//  cout << "IcBox: setup for 200 GeV RHIC\n";
  } else if(strcmp(setup,"LHC5020")==0) {
   sNN = 5020;
   eta0 = 3.7; //2.3 // midrapidity plateau
@@ -165,7 +165,8 @@ void IcBox::setIC(Fluid* f, EoS* eos) {
        // x-direction
        vx = 0.; // initial velocity
        vy = vz = 0.;
-       double deltaE = 0.01 * sin(2 * M_PI / L * x );
+       double deltaE = 0.;
+//       double deltaE = 0.;
        
 //        diagonal xy
 //       vx = 0.;
@@ -189,8 +190,8 @@ void IcBox::setIC(Fluid* f, EoS* eos) {
        
 
     nb = 0.;
-    c->setPrimVar(eos, tau0, deltaE, nb, 0.4*nb, 0., vx, 0., 0., e0, vx, vy, vz);
-    c->setPrimVarQ0(eos, tau0, e0, nb, 0.4*nb, 0., vx, vy, vz);
+    c->setPrimVar(eos, tau0, deltaE, nb, 0.4*nb, 0., vx, 0., 0., e_bck, vx, vy, vz);
+    c->setPrimVarQbck(eos, tau0, e_bck, nb, 0.4*nb, 0., vx, vy, vz);
        c->setAllM(1.0);
 
    }

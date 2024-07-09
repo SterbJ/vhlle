@@ -26,8 +26,8 @@ private:
  // auxiliary particle arrays
  double X[NP], Y[NP], W[NP];
  int C[NP];
- double e0 = 1.; // background energy density
- double p0 = 1./3; // background pressure
+ double e_bck = 1.; // background energy density
+ double p_bck = 1./3; // background pressure
     
 
  double tau0;
