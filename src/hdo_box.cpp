@@ -968,6 +968,62 @@ void Hydro::ISformal() {
      trcoeff->getOtherBulk(e_bck, d_nb, d_nq, d_ns, delPiPi, lamPipi);
      if(tauPi_bck < 0.5 * dt)// modified condition
       delPiPi = lamPipi = 0.0;
+     //#############
+        //noise
+        double xi[4][4];
+        double delta[4][4];
+        double Trxi = 0.;
+        for (int i=0; i<4; i++) {
+            for (int j=0; j<4; j++) {
+                delta[i][j] = gmunu[i][j] - u_bck[i]*u_bck[j];
+                xi[i][j] = 0.;
+            }
+        }
+        double size_x = f->getDx();
+        double size_y = f->getDy();
+        double size_z = f->getDz();
+        double volume = size_x * size_y * size_z;
+        for (int i=0; i<4; i++) {
+            for (int j=0; j<=i; j++) {
+                std::random_device rd;
+                std::mt19937 gen(rd());
+                double mean = 0.;
+                double sigma = sqrt(2 * eta_bck * T_bck * (delta[i][i] * delta[j][j] + delta[i][j] * delta[j][i])) / (sqrt(dt) * pow(volume, 3./2.)) * 0.197;
+//                cout << sigma << endl;
+                std::normal_distribution<double> d(mean, sigma);
+                xi[i][j] = d(gen);
+                if (i!=j) {
+                    xi[j][i] = xi[i][j];
+                }
+                if (i==j) {
+                    Trxi += xi[i][j];
+                }
+            }
+        }
+        for (int i=0; i<4; i++) {
+            for (int j=0; j<4; j++) {
+                if (i==j) {
+                    xi[i][j] -= 1./3. * Trxi;
+                }
+            }
+        }
+//        for (int i=0; i<4; i++) {
+//            for (int j=0; j<4; j++) {
+//                if (xi[i][j]>10) {
+//                    xi[i][j]=10.;
+//                }
+////                cout << xi[i][j] << "   " << i << "     " << j << endl;;
+//            }
+//        }
+//        cout << e_bck << "  " << eta_bck << "   " << T_bck << "     " << volume << "    ";
+//        for (int i=0; i<4; i++) {
+//            for (int j=0; j<=i; j++) {
+//                cout << sqrt(2 * eta_bck * T_bck * (delta[i][i] * delta[j][j] + delta[i][j] * delta[j][i]) - 4./3. * eta_bck * T_bck * delta[i][j] * delta[i][j]) / (sqrt(dt) * pow(volume, 3./2.)) * 0.197 << "   ";
+//            }
+//        }
+//        cout << endl;
+
+        //######################
      double Delta[10]; // corresponds to background Delta
      // relaxation term, piH,PiH-->half-step
      for (int i = 0; i < 4; i++)
@@ -983,11 +1039,12 @@ void Hydro::ISformal() {
 #else
           if(taupi_bck > 0.5 * dt){// modified condition - what the condition should be?
               c->setpiH0(i, j, c->getpi(i, j) -
-                         (c->getpi(i, j) - d_piNS[i][j]) * dt / 2.0 / gamma / taupi_bck);
+                         (c->getpi(i, j) - d_piNS[i][j] - xi[i][j]) * dt / 2.0 / gamma / taupi_bck);
               c->addpiH0(i, j, (c->getpi_bck(i, j) - piNS_bck[i][j]) * dt / 2.0 / gamma / (taupi_bck * taupi_bck) * d_taupi); // source term from delta tau_pi
+//              c->addpiH0(i, j, xi[i][j] * dt / 2.0 / gamma / taupi_bck);//adding the noise term
           }
           else
-              c->setpiH0(i, j, d_piNS[i][j]);//adding the noise term
+              c->setpiH0(i, j, d_piNS[i][j] + xi[i][j]);//adding the noise term
 #endif
       }
 #ifdef FORMAL_SOLUTION
@@ -1019,6 +1076,7 @@ void Hydro::ISformal() {
      for (int i = 0; i < 4; i++)
       for (int j = 0; j <= i; j++) {
 //        now transversality and cross terms
+//          c->addpiH0(i, j, -xi[i][j]);
           c->addpiH0(i, j, (- deltapipi * ( c->getpi(i, j) * du_bck + c->getpi_bck(i,j) * d_du ) ) / gamma * 0.5 * dt ); // the 4/3 source term
           c->addpiH0(i, j, lambdapiPi * ( c->getPi() * sigNS_bck[i][j] + c->getPi_bck() * d_sigNS[i][j] ) / gamma * 0.5 * dt); // lambdapiPi
        for (int k = 0; k < 4; k++) {
@@ -1079,11 +1137,12 @@ void Hydro::ISformal() {
 #else
       if(taupi_bck > 0.5 * dt){// modified condition
               c->setpi0(i, j, c->getpi(i, j) -
-                        (c->getpiH0(i, j) - d_piNS[i][j]) * dt / gamma / taupi_bck);
+                        (c->getpiH0(i, j) - d_piNS[i][j] - xi[i][j]) * dt / gamma / taupi_bck);
               c->addpi0(i, j, (c->getpiH0_bck(i, j) - piNS_bck[i][j]) * dt / gamma / (taupi_bck*taupi_bck) * d_taupi );
+//              c->addpi0(i, j, xi[i][j] * dt / gamma / taupi_bck);//adding the noise term
           }
       else
-          c->setpi0(i, j, d_piNS[i][j]);//adding the noise term
+          c->setpi0(i, j, d_piNS[i][j] + xi[i][j]);//adding the noise term
 #endif
       }
         
