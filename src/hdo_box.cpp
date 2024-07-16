@@ -934,12 +934,12 @@ void Hydro::ISformal() {
      double T1; // just for the derivative
      double h = 0.01; // shift for derivative
      eos->eos(e_bck, nb_bck, nq_bck, ns_bck, T_bck, mub, muq, mus, p_bck);
-     eos->eos(d_e+h, nb_bck, nq_bck, ns_bck, T1, mub, muq, mus, p_bck);
-     double dT = (T1 - T_bck) / h ; // derivative of temperature wrt energy density
+     eos->eos(e_bck* (1 + h), nb_bck, nq_bck, ns_bck, T1, mub, muq, mus, p_bck);
+     double dT = (T1 - T_bck) / (e_bck *h) ; // derivative of temperature wrt energy density
      double etaS, zetaS; // constant ratio
      trcoeff->getEta(e_bck, nb_bck, T_bck, etaS, zetaS); // obtains eta and zeta
      const double s_bck = eos->s(e_bck, nb_bck, nq_bck, ns_bck); // background enthropy
-     double dS = (eos->s(e_bck + h, nb_bck, nq_bck, ns_bck) - s_bck ) / h; // derivative of enthropy wtr to energy density
+     double dS = (eos->s(e_bck * (1 + h), nb_bck, nq_bck, ns_bck) - s_bck ) / (e_bck *h); // derivative of enthropy wtr to energy density
      double d_s = dS * d_e; // fluctuation of enthropy
      const double eta_bck = etaS * s_bck; // eta0 - background viscosity
      const double d_eta = etaS * d_s; // fluctuation in viscosity
@@ -988,7 +988,7 @@ void Hydro::ISformal() {
                 std::random_device rd;
                 std::mt19937 gen(rd());
                 double mean = 0.;
-                double sigma = sqrt(2 * eta_bck * T_bck * (delta[i][i] * delta[j][j] + delta[i][j] * delta[j][i])) / (sqrt(dt) * pow(volume, 3./2.)) * 0.197;
+                double sigma = sqrt(2 * eta_bck * T_bck * (delta[i][i] * delta[j][j] + delta[i][j] * delta[j][i])) / (sqrt(dt) * pow(volume, 1./2.)) * 0.197 * 0.197;
 //                cout << sigma << endl;
                 std::normal_distribution<double> d(mean, sigma);
                 xi[i][j] = d(gen);
@@ -1007,12 +1007,13 @@ void Hydro::ISformal() {
                 }
             }
         }
+//        double konst = 0.;
 //        for (int i=0; i<4; i++) {
 //            for (int j=0; j<4; j++) {
 //                if (xi[i][j]>10) {
 //                    xi[i][j]=10.;
 //                }
-////                cout << xi[i][j] << "   " << i << "     " << j << endl;;
+//                cout << xi[i][j] << "   " << i << "     " << j << endl;;
 //            }
 //        }
 //        cout << e_bck << "  " << eta_bck << "   " << T_bck << "     " << volume << "    ";
@@ -1283,6 +1284,7 @@ void Hydro::ISformal() {
         }
     bool rescaled = false;
     if (maxT0 / maxpi < 1.0) { // I am not sure how this rescaling should work - if the fluctuation is comparable to background, then it should be rescaled?
+        cout << maxpi <<"   " << maxT0 << endl;
      for (int i = 0; i < 4; i++)
       for (int j = 0; j < 4; j++) {
        d_pi[i][j] = 0.1 * d_pi[i][j] * maxT0 / maxpi;
