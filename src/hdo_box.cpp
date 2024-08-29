@@ -1436,6 +1436,7 @@ void Hydro::performStep(double ctime) {
     int count_minus = 0;
     double sum_neg_e = 0.;
     double sum_pos_e = 0.;
+    double pimunu = 0;
     for (int ix = 0; ix < f->getNX(); ix++) {
         for (int iy = 0; iy < f->getNY(); iy++) {
             for (int iz = 0; iz < f->getNZ(); iz++) {
@@ -1476,6 +1477,8 @@ void Hydro::performStep(double ctime) {
                 average_vy += vy /total;
                 average_vz += vz /total;
                 average_e_bck += e__0 / total;
+                pimunu += c->getpi(0, 0) * c->getpi(0, 0) / total;
+                
 //                if (e<-e__0) {
 //                    if (e<-2*e__0) {
 //                        missing_e += e;
@@ -1492,7 +1495,7 @@ void Hydro::performStep(double ctime) {
             }
         }
     }
-    cout << variance_e << "   " << average_e << "     " << sum_neg_e << "  " << count_minus << "     " << sum_pos_e << "  " << count_plus << "     " << average_vx << "     " << average_vy << "     " << average_vx << endl;
+    cout << variance_e << "   " << average_e << "     " << sum_neg_e << "  " << count_minus << "     " << sum_pos_e << "  " << count_plus << "     " << average_vx << "     " << average_vy << "     " << average_vx << "   " << pimunu << endl;
 //    count = 0;
 //    sum_neg_e = 0;
 //  Some stuff to print out the values
@@ -1524,7 +1527,7 @@ void Hydro::performStep(double ctime) {
 //            }
 //        }
 //    }
-//    if (ctime>14.95 && ctime < 15.05) {
+//    if (ctime>59.95 && ctime < 60.05) {
 //        for (int i=0; i<total; i++) {
 //            in[i].r = values.at(i);
 //            in[i].i = 0.;
