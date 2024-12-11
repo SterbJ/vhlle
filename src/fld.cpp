@@ -102,6 +102,9 @@ Fluid::Fluid(EoS *_eos, EoS *_eosH, TransportCoeff *_trcoeff, int _nx, int _ny,
     getCell(ix, iy, iz)->setPrev(Z_, getCell(ix, iy, iz - 1));
     getCell(ix, iy, iz)->setNext(Z_, getCell(ix, iy, iz + 1));
     getCell(ix, iy, iz)->setPos(ix, iy, iz);
+       if (getCell(ix,iy,iz)->getPrev(0)==0) {
+           cout << "it happened" << endl;
+       }
    }
 
  output_nt = 0;

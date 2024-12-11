@@ -53,7 +53,7 @@ string collSystem, outputDir, isInputFile;
 double etaS, zetaS, eCrit, eEtaSMin, al, ah, aRho, T0, etaSMin;
 int icModel,glauberVariable =1;  // icModel=1 for pure Glauber, 2 for table input (Glissando etc)
 double epsilon0, Rgt, Rgz, impactPar, s0ScaleFactor;
-bool freezeoutOnly {false};  // freezoutOnly 1 for true, 0 for false
+//bool freezeoutOnly {false};  // freezoutOnly 1 for true, 0 for false
 
 void setDefaultParameters() {
  tauResize = 4.0;
@@ -138,8 +138,8 @@ void readParameters(char *parFile) {
    eEtaSMin = atof(parValue);
   else if (strcmp(parName, "etaSMin") == 0)
    etaSMin = atof(parValue);
-  else if (strcmp(parName, "freezeoutOnly") == 0)
-   freezeoutOnly = atoi(parValue);
+//  else if (strcmp(parName, "freezeoutOnly") == 0)
+//   freezeoutOnly = atoi(parValue);
 //  else if (parName[0] == '!')
 //   cout << "CCC " << sline.str() << endl;
 //  else
@@ -150,7 +150,7 @@ void readParameters(char *parFile) {
 void printParameters() {
  cout << "====== parameters ======\n";
  cout << "outputDir = " << outputDir << endl;
- cout << "freezeoutOnly = " << freezeoutOnly << endl;
+// cout << "freezeoutOnly = " << freezeoutOnly << endl;
  cout << "eosType = " << eosType << endl;
  cout << "eosTypeHadron = " << eosTypeHadron << endl;
  cout << "nx = " << nx << endl;
@@ -250,7 +250,7 @@ Fluid* expandGrid2x(Hydro* h, EoS* eos, EoS* eosH, TransportCoeff *trcoeff) {
 // double epsilon0, alpha, impactPar, s0ScaleFactor ;
 
 int main(int argc, char **argv) {
-
+//    for (int i=0; i<100; i++) {
         // pointers to all the main objects
         EoS *eos;
         EoS *eosH;
@@ -276,7 +276,7 @@ int main(int argc, char **argv) {
         else if (eosType == 2)
             eos = new EoSAZH();
         else {
-//            cout << "eosType != 0,1,2\n";
+            //            cout << "eosType != 0,1,2\n";
             return 0;
         }
         
@@ -342,7 +342,7 @@ int main(int argc, char **argv) {
         } else {
             cout << "icModel = " << icModel << " not implemented\n";
         }
-//        cout << "IC done\n";
+        //        cout << "IC done\n";
         
         // For calculating initial anisotropy without running full hydro, uncomment following line
         //f->InitialAnisotropies(tau0) ;
@@ -372,8 +372,8 @@ int main(int argc, char **argv) {
             ctime = h->getTau();
 #endif
             
-//                 cout << "ctime" << setw(14) << ctime << endl; // for the whole profile at given timestep
-                 cout << setw(14) << ctime << "     "; // for a time profile at specifis point
+            cout << "ctime" << setw(14) << ctime << endl; // for the whole profile at given timesteps
+            //                 cout << setw(14) << ctime << "     "; // for a time profile at specifis point
             
             
             //  while (dtau / nSubSteps >
@@ -411,5 +411,6 @@ int main(int argc, char **argv) {
         delete h;
         delete eos;
         delete eosH;
+//    }
 
 }

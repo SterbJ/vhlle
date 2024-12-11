@@ -91,6 +91,7 @@ void TransportCoeff::getTau(double e_bck, double d_e, double rho, double T_bck, 
  if (T_bck > 0.) {
      _taupi = 5. / 5.068 * etaS(e_bck, rho, T_bck) / T_bck ; // background shear
      _d_taupi = -5. / 5.068 * etaS(e_bck, rho, T_bck) / (T_bck * T_bck) * dT * d_e; // fluctuation shear
+//     std::cout << "TAU=" << _taupi << "  " << _d_taupi << std::endl;
      _tauPi = 6.0 / 5.068 * zetaS(e_bck, T0) / T0; // background bulk
      _d_tauPi = -6.0 / 5.068 * zetaS(e_bck, T_bck) / (T_bck * T_bck) * dT * d_e; // fluctuation bulk
  } else {

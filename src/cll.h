@@ -288,6 +288,25 @@ public:
   d_flux[NQ_] += Fnq;
   d_flux[NS_] += Fns;
  }
+ inline void getFlux(double F[7]) {
+     F[0] = d_flux[T_];
+     F[1] = d_flux[X_];
+     F[2] = d_flux[Y_];
+     F[3] = d_flux[Z_];
+     F[4] = d_flux[NB_];
+     F[5] = d_flux[NQ_];
+     F[6] = d_flux[NS_];
+ }
+ inline void setFlux(double Ft, double Fx, double Fy, double Fz, double Fnb,
+                     double Fnq, double Fns) {
+     d_flux[T_] = Ft;
+     d_flux[X_] = Fx;
+     d_flux[Y_] = Fy;
+     d_flux[Z_] = Fz;
+     d_flux[NB_] = Fnb;
+     d_flux[NQ_] = Fnq;
+     d_flux[NS_] = Fns;
+ }
  inline void clearFlux(void) {
   for (int i = 0; i < 7; i++) d_flux[i] = 0.;
  }

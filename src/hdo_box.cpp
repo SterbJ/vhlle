@@ -89,7 +89,7 @@ void Hydro::setDtau(double deltaTau) {
  }
 }
 
-void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix) {
+void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix, int iy, int iz) {
  // for all variables, suffix "l" = left state, "r" = right state
  // with respect to the cell boundary
  // idea is that e.g. el corresponds to the fluctuation
@@ -141,44 +141,42 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix) 
   #endif
  }
 
- if (d_el + el_bck < 0. || el_bck < 0.) {//modified condition - do we allow fluctuations in empty cell?
-//     if(d_el < -2*el_bck){
-         d_el = 0.;
-         d_pl = 0.;
-////         d_vxl = 0.;
-////         d_vyl = 0.;
-////         d_vzl = 0.;
-//     }
-//     else{
-//         //     d_el = el_bck;
-//         //     d_pl = pl_bck;
-//         //  d_el = 0.;
-//         d_el = el_bck + d_el;
-//         //  el_bck = 0.;
-//         //  d_pl = 0.;
-//         d_pl = pl_bck + d_pl;
-//         //  pl_bck = 0.;
-//     }
- }
- if (d_er + er_bck < 0. || er_bck < 0.) {//modified condition
-//     if(d_er < -2*er_bck){
-         d_er = 0.;
-         d_pr = 0.;
-////         d_vxr = 0.;
-////         d_vyr = 0.;
-////         d_vzr = 0.;
-//     }
-//     else{
-//         //     d_er = er_bck;
-//         //     d_pr = pr_bck;
-//         //  d_er = 0.;
-//              d_er = er_bck + d_er;
-//         //  er_bck = 0.;
-//         //  d_pr = 0.;
-//              d_pr = pr_bck + d_pr;
-//         //  pr_bck = 0.;
-//     }
- }
+// if (d_el < -el_bck || el_bck < 0.) {//modified condition - do we allow fluctuations in empty cell?
+//     d_el = -el_bck;
+//     d_pl = -pl_bck;
+//     left->setPrimVar(eos, tau, d_el, d_pl, 0., 0., 0., 0., 0., el_bck, vxl_bck, vyl_bck, vzl_bck);
+//     left->getPrimVarRight(eos, tau, d_el, d_pl, d_nbl, d_nql, d_nsl, d_vxl, d_vyl, d_vzl,
+//                            direction, el_bck, pl_bck, nbl_bck, nql_bck, nsl_bck, vxl_bck, vyl_bck, vzl_bck);
+////     left->setFlux(0.,0.,0.,0.,0.,0.,0.);
+////     right->setFlux(0.,0.,0.,0.,0.,0.,0.);
+// }
+// if (d_er < -er_bck || er_bck < 0.) {//modified condition
+//     d_er = -er_bck;
+//     d_pr = -pr_bck;
+//     right->setPrimVar(eos, tau, d_er, d_pr, 0., 0., 0., 0., 0., er_bck, vxr_bck, vyr_bck, vzr_bck);
+//     right->getPrimVarLeft(eos, tau, d_er, d_pr, d_nbr, d_nqr, d_nsr, d_vxr, d_vyr, d_vzr,
+//                            direction, er_bck, pr_bck, nbr_bck, nqr_bck, nsr_bck, vxr_bck, vyr_bck, vzr_bck);
+////     left->setFlux(0.,0.,0.,0.,0.,0.,0.);
+////     right->setFlux(0.,0.,0.,0.,0.,0.,0.);
+// }
+//    if (d_el > el_bck) {//modified condition - do we allow fluctuations in empty cell?
+//        d_el = el_bck;
+//        d_pl = pl_bck;
+//        left->setPrimVar(eos, tau, d_el, d_pl, 0., 0., 0., 0., 0., el_bck, vxl_bck, vyl_bck, vzl_bck);
+//        left->getPrimVarRight(eos, tau, d_el, d_pl, d_nbl, d_nql, d_nsl, d_vxl, d_vyl, d_vzl,
+//                               direction, el_bck, pl_bck, nbl_bck, nql_bck, nsl_bck, vxl_bck, vyl_bck, vzl_bck);
+//   //     left->setFlux(0.,0.,0.,0.,0.,0.,0.);
+//   //     right->setFlux(0.,0.,0.,0.,0.,0.,0.);
+//    }
+//    if (d_er > er_bck) {//modified condition
+//        d_er = er_bck;
+//        d_pr = pr_bck;
+//        right->setPrimVar(eos, tau, d_er, d_pr, 0., 0., 0., 0., 0., er_bck, vxr_bck, vyr_bck, vzr_bck);
+//        right->getPrimVarLeft(eos, tau, d_er, d_pr, d_nbr, d_nqr, d_nsr, d_vxr, d_vyr, d_vzr,
+//                               direction, er_bck, pr_bck, nbr_bck, nqr_bck, nsr_bck, vxr_bck, vyr_bck, vzr_bck);
+//   //     left->setFlux(0.,0.,0.,0.,0.,0.,0.);
+//   //     right->setFlux(0.,0.,0.,0.,0.,0.,0.);
+//    }
 
  if (d_el+el_bck > 1e10 || el_bck > 1e10) {//modified condition
   cout << "e>1e10; debug info below:\n";
@@ -201,24 +199,22 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix) 
  }
 
  // skip the procedure for two empty cells
- if ((d_el+el_bck < 1e-18 && d_er+er_bck < 1e-18) || (el_bck == 0. && er_bck == 0.)) return;//modified condition - thershold!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ //if ((d_el+el_bck < 0. && d_er+er_bck < 0.) || (el_bck == 0. && er_bck == 0.)) return;//modified condition - thershold!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  if (d_pr + pr_bck < 0. || pr_bck < 0.) {//modified condition
-  cout << "Negative pressure    " << d_pr << endl;
-  left->getPrimVarRightQbck(eos, tau, el_bck, pl_bck, nbl_bck, nql_bck, nsl_bck, vxl_bck, vyl_bck, vzl_bck,
-                           direction);
-  left->getPrimVarRight(eos, tau, d_el, d_pl, d_nbl, d_nql, d_nsl, d_vxl, d_vyl, d_vzl,
-                        direction, el_bck, pl_bck, nbl_bck, nql_bck, nsl_bck, vxl_bck, vyl_bck, vzl_bck);
-  right->getPrimVarLeftQbck(eos, tau, er_bck, pr_bck, nbr_bck, nqr_bck, nsr_bck, vxr_bck, vyr_bck, vzr_bck,
-                           direction);
-  right->getPrimVarLeft(eos, tau, d_er, d_pr, d_nbr, d_nqr, d_nsr, d_vxr, d_vyr, d_vzr,
-                        direction, er_bck, pr_bck, nbr_bck, nqr_bck, nsr_bck, vxr_bck, vyr_bck, vzr_bck);
+//     return;
+  cout << "Negative pressure    " << d_pr << "      " << d_er << "  " << ix << "    " << iy << "    " << iz << endl;
+//  left->getPrimVarRightQbck(eos, tau, el_bck, pl_bck, nbl_bck, nql_bck, nsl_bck, vxl_bck, vyl_bck, vzl_bck,
+//                           direction);
+//  left->getPrimVarRight(eos, tau, d_el, d_pl, d_nbl, d_nql, d_nsl, d_vxl, d_vyl, d_vzl,
+//                        direction, el_bck, pl_bck, nbl_bck, nql_bck, nsl_bck, vxl_bck, vyl_bck, vzl_bck);
+//  right->getPrimVarLeftQbck(eos, tau, er_bck, pr_bck, nbr_bck, nqr_bck, nsr_bck, vxr_bck, vyr_bck, vzr_bck,
+//                           direction);
+//  right->getPrimVarLeft(eos, tau, d_er, d_pr, d_nbr, d_nqr, d_nsr, d_vxr, d_vyr, d_vzr,
+//                        direction, er_bck, pr_bck, nbr_bck, nqr_bck, nsr_bck, vxr_bck, vyr_bck, vzr_bck);
  }
 
  // skip the procedure for two partially vacuum cells
  if (left->getM(direction) < 1. && right->getM(direction) < 1.) return;
-
-//    double el0, pl0, nbl0, nql0, nsl0, vxl0, vyl0, vzl0;
-//    double er0, pr0, nbr0, nqr0, nsr0, vxr0, vyr0, vzr0;
     
     double gammal_bck = 1./ sqrt(1. - vxl_bck * vxl_bck - vyl_bck * vyl_bck - vzl_bck * vzl_bck);
     double gammar_bck = 1./ sqrt(1. - vxr_bck * vxr_bck - vyr_bck * vyr_bck - vzr_bck * vzr_bck);
@@ -372,7 +368,7 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix) 
  d_flux[NS_] = tauFactor * dta / dx *
              (-bl * br * (d_Usl - d_Usr) + br * d_Fsl - bl * d_Fsr) / (-bl + br);
 
-
+//    cout << d_flux[T_] << endl;
  if (d_flux[NB_] != d_flux[NB_]) {  // if things failed
   cout << "---- error in hlle_flux: f_nb undefined!\n";
   cout << setw(12) << d_U4l << setw(12) << d_U1l << setw(12) << d_U2l << setw(12)
@@ -389,10 +385,20 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix) 
  }
 
  // update the cumulative fluxes in both neighbouring cells
- left->addFlux(-d_flux[T_], -d_flux[X_], -d_flux[Y_], -d_flux[Z_], -d_flux[NB_],
-               -d_flux[NQ_], -d_flux[NS_]);
- right->addFlux(d_flux[T_], d_flux[X_], d_flux[Y_], d_flux[Z_], d_flux[NB_], d_flux[NQ_],
-                d_flux[NS_]);
+    double Tl[7];
+    double Tr[7];
+    left->getQ(Tl);
+    right->getQ(Tr);
+     if ((abs(Tl[0]/6 - d_flux[0]) > 1./6) || (abs(Tr[0]/6 + d_flux[0]) > 1./6)) {
+         left->addFlux(0., -d_flux[X_], -d_flux[Y_], -d_flux[Z_], 0., 0., 0.);
+         right->addFlux(0., d_flux[X_], d_flux[Y_], d_flux[Z_], 0., 0., 0.);
+     }
+     else{
+         left->addFlux(-d_flux[T_], -d_flux[X_], -d_flux[Y_], -d_flux[Z_], -d_flux[NB_],
+                       -d_flux[NQ_], -d_flux[NS_]);
+         right->addFlux(d_flux[T_], d_flux[X_], d_flux[Y_], d_flux[Z_], d_flux[NB_], d_flux[NQ_],
+                        d_flux[NS_]);
+     }
 }
 
 
@@ -871,6 +877,12 @@ void Hydro::ISformal() {
                       {0, 0, -1, 0},// tau factor not needed in Cartesian coordinates
                       {0, 0, 0, -1}};
  // loop #1 (relaxation+source terms)
+    double pr[4][4];
+    for (int i=0; i<4; i++) {
+        for (int j=0; j<4; j++) {
+            pr[i][j] = 0.;
+        }
+    }
  for (int ix = 0; ix < f->getNX(); ix++)
   for (int iy = 0; iy < f->getNY(); iy++)
    for (int iz = 0; iz < f->getNZ(); iz++) {
@@ -879,7 +891,7 @@ void Hydro::ISformal() {
     c->getPrimVarHCenter(eos, tauMinusHalf, d_e, d_p, d_nb, d_nq, d_ns, d_vx, d_vy,
                          d_vz, e_bck, p_bck, nb_bck, nq_bck, ns_bck, vx_bck, vy_bck, vz_bck);  // instead of getPrimVar()
        
-    if (d_e+e_bck <= 0. || e_bck <= 0.) {// modified condition             // empty cell?
+    if (d_e+e_bck < 0. || e_bck <= 0.) {// modified condition             // empty cell?
      for (int i = 0; i < 4; i++)
       for (int j = 0; j <= i; j++) {
        c->setpiH0(i, j, 0.0);
@@ -942,6 +954,7 @@ void Hydro::ISformal() {
      double dS = (eos->s(e_bck * (1 + h), nb_bck, nq_bck, ns_bck) - s_bck ) / (e_bck *h); // derivative of enthropy wtr to energy density
      double d_s = dS * d_e; // fluctuation of enthropy
      const double eta_bck = etaS * s_bck; // eta0 - background viscosity
+//        cout << eta_bck << endl;
      const double d_eta = etaS * d_s; // fluctuation in viscosity
      double eta = eta_bck + d_eta; // whole shear viscosity
      // auxiliary variable sigmaNS = piNS / (2*eta),
@@ -988,13 +1001,18 @@ void Hydro::ISformal() {
                 std::random_device rd;
                 std::mt19937 gen(rd());
                 double mean = 0.;
-                double sigma = sqrt(2 * eta_bck * T_bck * (delta[i][i] * delta[j][j] + delta[i][j] * delta[j][i])) / (sqrt(dt) * pow(volume, 1./2.)) * 0.197 * 0.197;
-//                cout << sigma << endl;
+                double sigma = sqrt(2 * eta_bck * T_bck * (delta[i][i] * delta[j][j] + delta[i][j] * delta[j][i])) / (sqrt(dt) * pow(volume, 1./2.)) * sqrt(0.197);
+//                double sigma = sqrt(2 * eta_bck * T_bck * (delta[i][i] * delta[j][j] + delta[i][j] * delta[j][i])) / (sqrt(dt) * pow(volume, 1./2.)) * 0.197 * 0.197;
+//                cout << eta_bck << endl;
+//                if (i==1 && j==1) {
+//                    cout << sigma << endl;
+//                }
                 std::normal_distribution<double> d(mean, sigma);
                 xi[i][j] = d(gen);
                 if (i!=j) {
                     xi[j][i] = xi[i][j];
                 }
+//                cout << xi[i][j] << "   " << i << "     " << j << endl;
                 if (i==j) {
                     Trxi += xi[i][j];
                 }
@@ -1002,28 +1020,18 @@ void Hydro::ISformal() {
         }
         for (int i=0; i<4; i++) {
             for (int j=0; j<4; j++) {
-                if (i==j) {
+                if (i==j && i!=0) {
                     xi[i][j] -= 1./3. * Trxi;
                 }
             }
         }
-//        double konst = 0.;
-//        for (int i=0; i<4; i++) {
-//            for (int j=0; j<4; j++) {
-//                if (xi[i][j]>10) {
-//                    xi[i][j]=10.;
-//                }
-//                cout << xi[i][j] << "   " << i << "     " << j << endl;;
-//            }
-//        }
-//        cout << e_bck << "  " << eta_bck << "   " << T_bck << "     " << volume << "    ";
-//        for (int i=0; i<4; i++) {
-//            for (int j=0; j<=i; j++) {
-//                cout << sqrt(2 * eta_bck * T_bck * (delta[i][i] * delta[j][j] + delta[i][j] * delta[j][i]) - 4./3. * eta_bck * T_bck * delta[i][j] * delta[i][j]) / (sqrt(dt) * pow(volume, 3./2.)) * 0.197 << "   ";
-//            }
-//        }
-//        cout << endl;
-
+//        cout << "Trxi:  " << xi[0][0] + xi[1][1] + xi[2][2] + xi[3][3] << endl;
+//        xi00_cell[ix][iy][iz]=xi[0][0] * dt / 2.0 / gamma / taupi_bck;
+        for (int i=0; i<4; i++) {
+            for (int j=0; j<4; j++) {
+                xi00_cell[ix][iy][iz][i][j]=xi[i][j];
+            }
+        }
         //######################
      double Delta[10]; // corresponds to background Delta
      // relaxation term, piH,PiH-->half-step
@@ -1218,7 +1226,6 @@ void Hydro::ISformal() {
     }  // end non-empty cell
    }   // end loop #1
     
-    
  // 3) -- advection ---
  // takes into account only the background velocity - from the look of the term with delta pi^munu time derivative
  for (int ix = 0; ix < f->getNX(); ix++)
@@ -1276,7 +1283,7 @@ void Hydro::ISformal() {
                        (e_bck + p_bck) * (vx_bck * vx_bck + vy_bck * vy_bck + vz_bck * vz_bck) /
                                (1. - vx_bck * vx_bck - vy_bck * vy_bck - vz_bck * vz_bck) +
                            p_bck);
-    // double maxpi = max(fabs(pi[1][1]),fabs(pi[2][2])) ;
+//     double maxpi = max(fabs(pi[1][1]),fabs(pi[2][2])) ;
     double maxpi = 0.;
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++){
@@ -1284,13 +1291,12 @@ void Hydro::ISformal() {
         }
     bool rescaled = false;
     if (maxT0 / maxpi < 1.0) { // I am not sure how this rescaling should work - if the fluctuation is comparable to background, then it should be rescaled?
-        cout << maxpi <<"   " << maxT0 << endl;
-     for (int i = 0; i < 4; i++)
-      for (int j = 0; j < 4; j++) {
-       d_pi[i][j] = 0.1 * d_pi[i][j] * maxT0 / maxpi;
-       d_piH[i][j] = 0.1 * d_piH[i][j] * maxT0 / maxpi;
-      }
-     rescaled = true;
+//     for (int i = 0; i < 4; i++)
+//      for (int j = 0; j < 4; j++) {
+//       d_pi[i][j] = 0.1 * d_pi[i][j] * maxT0 / maxpi;
+//       d_piH[i][j] = 0.1 * d_piH[i][j] * maxT0 / maxpi;
+//      }
+//     rescaled = true;
     }
     if (fabs(d_Pi) > d_p) {
      if (d_Pi != 0.) d_Pi = 1 * d_Pi / fabs(d_Pi) * d_p;     //modified .1 -> 1
@@ -1310,6 +1316,7 @@ void Hydro::ISformal() {
     c->setPi(d_Pi);
     c->setPiH(d_PiH);
     // source term  - (tau+dt)*delta_Q_(i+1)/delta_tau
+//       cout << "Trpi:   " << d_pi[0][0] + d_pi[1][1] + d_pi[2][2] + d_pi[3][3] << endl;
        
     double gamma = 1.0 / sqrt(1.0 - vx_bck * vx_bck - vy_bck * vy_bck - vz_bck * vz_bck);
     double u_bck[4]; // background
@@ -1334,7 +1341,7 @@ void Hydro::ISformal() {
 }
 
 // this procedure explicitly uses T_==0, X_==1, Y_==2, Z_==3
-void Hydro::visc_flux(Cell *left, Cell *right, int direction, double ix, double iy, double iz) {
+void Hydro::visc_flux(Cell *left, Cell *right, int direction, int ix, int iy, int iz) {
  double d_flux[4];
  int ind2 = 0;
  double dxa = 0.;
@@ -1392,7 +1399,7 @@ void Hydro::visc_flux(Cell *left, Cell *right, int direction, double ix, double 
  else if (direction == Z_)
   ind2 = 3;
  for (int ind1 = 0; ind1 < 4; ind1++) {
-  d_flux[ind1] = 0.5 * (left->getpiH(ind1, ind2) + right->getpiH(ind1, ind2));
+  d_flux[ind1] = 0.5 * (left->getpiH(ind1, ind2) + right->getpiH(ind1, ind2));//tady zmena?
  if (ind1 == ind2){
      d_flux[ind1] += -0.5 * (left->getPiH() + right->getPiH()) *
      gmumu[ind1];  // gmunu is diagonal
@@ -1401,13 +1408,23 @@ void Hydro::visc_flux(Cell *left, Cell *right, int direction, double ix, double 
              + 0.5 * (left->getPiH_bck() + right->getPiH_bck()) * ( uuu_bck[ind1] * d_uuu[ind2] + d_uuu[ind1] * uuu_bck[ind2] );
  }
  for (int i = 0; i < 4; i++) d_flux[i] = d_flux[i] * tauMinusHalf * dt / dxa;
- left->addFlux(-d_flux[T_], -d_flux[X_], -d_flux[Y_], -d_flux[Z_], 0., 0., 0.);
- right->addFlux(d_flux[T_], d_flux[X_], d_flux[Y_], d_flux[Z_], 0., 0., 0.);
+            double Tl[7];
+            double Tr[7];
+            left->getQ(Tl);
+            right->getQ(Tr);
+            if ((abs(Tl[0]/6 - d_flux[0]) > 1./6) || (abs(Tr[0]/6 + d_flux[0]) > 1./6)) {
+                 left->addFlux(0., -d_flux[X_], -d_flux[Y_], -d_flux[Z_], 0., 0., 0.);
+                 right->addFlux(0., d_flux[X_], d_flux[Y_], d_flux[Z_], 0., 0., 0.);
+             }
+             else{
+                 left->addFlux(-d_flux[T_], -d_flux[X_], -d_flux[Y_], -d_flux[Z_], 0., 0., 0.);
+                 right->addFlux(d_flux[T_], d_flux[X_], d_flux[Y_], d_flux[Z_], 0., 0., 0.);
+             }
 }
 
 void Hydro::performStep(double ctime) {
  // debugRiemann = false ; // turn off debug output
-
+// ofstream myfile;
  f->updateM(tau, dt);
 
  tau_z = dt / 2. / log(1 + dt / 2. / tau);
@@ -1416,198 +1433,135 @@ void Hydro::performStep(double ctime) {
     int nz = f->getNZ();
     int total = nx * ny * nz;
     int dims[3] = {nx, ny, nz};
-    kiss_fftnd_cfg cfg = kiss_fftnd_alloc(dims, 3, false, NULL, NULL);
-    kiss_fft_cpx *in = new kiss_fft_cpx[total];
-    kiss_fft_cpx *out = new kiss_fft_cpx[total];
+    double T00=0.;
+    double T_mean[7];
 
-//  variance
-    double variance_e = 0;
-    double average_e = 0.;
-    double average_vx = 0.;
-    double average_vy = 0.;
-    double average_vz = 0.;
-    double average_e_bck = 0.;
-    double missing_e = 0.;
-//    double average_vx_bck = 0.;
-//    double average_vy_bck = 0.;
-//    double average_vz_bck = 0.;
-    double T00 = 0.;
-    int count_plus = 0;
-    int count_minus = 0;
-    double sum_neg_e = 0.;
-    double sum_pos_e = 0.;
-    double pimunu = 0;
+//  Some stuff to print out the values
+    std::vector<double> values; // vector for FFT
     for (int ix = 0; ix < f->getNX(); ix++) {
-        for (int iy = 0; iy < f->getNY(); iy++) {
-            for (int iz = 0; iz < f->getNZ(); iz++) {
+        for (int iy = 0; iy < f->getNY(); iy++){
+            for (int iz = 0; iz < f->getNZ(); iz++){
+
+//                double T00=0.;
                 double e, p, nb, nq, ns, vx, vy, vz, cs, T, mub, muq, mus;
                 double e__0, p__0, nb__0, nq__0, ns__0, vx__0, vy__0, vz__0, cs__0, T__0, mub__0, muq__0, mus__0;
+
                 Cell *c = f->getCell(ix, iy, iz);
+
                 c -> getPrimVarQbck(eos, tau, e__0, p__0, nb__0, nq__0, ns__0, vx__0, vy__0, vz__0);
                 c -> getPrimVar(eos, tau, e, p, nb, nq, ns, vx, vy, vz, e__0, p__0, nb__0, nq__0, ns__0, vx__0, vy__0, vz__0);
-//                variance_e += e * e / total - e / total * e / total;
-//                average_e += e / total;
-//                average_vx += vx /total;
-//                average_vy += vy /total;
-//                average_vz += vz /total;
-//                average_e_bck += e__0 / total;
-//                average_vx_bck += vx__0 /total;
-//                average_vy_bck += vy__0 /total;
-//                average_vz_bck += vz__0 /total;
-//                double Tmunu[7];
-//                c->getQ(Tmunu);
-//                T00 += Tmunu[0]/total;
-//                if (abs(e)>1.) {
-                    if (e>0.) {
-                        count_plus += 1;
-//                        sum_pos_e += e - 1.;
-//                        e=1.;
-                    }
-                    if (e<0.) {
-                        count_minus += 1;
-//                        sum_neg_e += e + 1.;
-//                        e=-1.;
-                    }
-//                    e = -1.;
-//                    cout << vx << "     " << p << "    " << f->getX(ix) << "    " << f->getY(iy) << "      " << e << "       " << cs << "     " << T__0 << endl;
-//                }
-                variance_e += e * e / total - e / total * e / total;
-                average_e += e / total;
-                average_vx += vx /total;
-                average_vy += vy /total;
-                average_vz += vz /total;
-                average_e_bck += e__0 / total;
-                pimunu += c->getpi(0, 0) * c->getpi(0, 0) / total;
                 
-//                if (e<-e__0) {
-//                    if (e<-2*e__0) {
-//                        missing_e += e;
-//                    }
-//                    else {
-//                        missing_e += -e__0;
-//                    }
+//                if (abs(e) > e__0 || e__0 < 0.) {//modified condition - do we allow fluctuations in empty cell?
+//                    c->setPrimVar(eos, tau, 0., 0., 0., 0., 0., 0., 0., e__0, vx__0, vy__0, vz__0);
+//                    c->getPrimVar(eos, tau, e, p, nb, nq, ns, vx, vy, vz, e__0, p__0, nb__0, nq__0, ns__0, vx__0, vy__0, vz__0);
 //                }
                 
-//                average_vx_bck += vx__0 /total;
-//                average_vy_bck += vy__0 /total;
-//                average_vz_bck += vz__0 /total;
-//                cout << vx << "     " << p << "    " << f->getX(ix) << "    " << f->getY(iy) << "      " << e << "       " << cs << "     " << T__0 << endl;
+//                cs = eos->cs();
+                eos->eos(e__0, nb__0, nq__0, ns__0, T__0, mub, muq, mus, p__0);
+                double Tmunu[7];
+                double T_bck[7];
+                c->getQ(Tmunu);
+                c->getQbck(T_bck);
+                double T00id = Tmunu[0];
+                double T00visc = c->getpi0(0, 0);// nebo H?
+//                cout << T_bck[0] << endl;
+//                double fluc = xi00_cell[ix][iy][iz];
+//                cout << ctime << "  " << T00id << "     " << c->getpiH(0, 0) << "     " << c->getpi(0, 0) << "     " << xi00_cell[ix][iy][iz] << "    " << ix << "    " << iy << "    " << iz << endl;
+                T00 += T00id + T00visc;
+                for (int i=0; i<7; i++) {
+                    T_mean[i] += Tmunu[i]/total;
+                }
+                double F[7];
+//                c->getFlux(F);
+//                cout << T00/total << endl;
+//                cout << T__0 << endl;
+//                double etaS, zetaS;
+//                trcoeff->getEta(e__0, nb__0, T__0, etaS, zetaS);
+//                values.push_back(T00);//toto
+//                cout << e << endl;
+                  values.push_back(e);//toto
+//                trcoeff->getTau()????
             }
         }
     }
-    cout << variance_e << "   " << average_e << "     " << sum_neg_e << "  " << count_minus << "     " << sum_pos_e << "  " << count_plus << "     " << average_vx << "     " << average_vy << "     " << average_vx << "   " << pimunu << endl;
-//    count = 0;
-//    sum_neg_e = 0;
-//  Some stuff to print out the values
-//    std::vector<double> values; // vector for FT
-//    for (int ix = 0; ix < f->getNX(); ix++) {
-//        for (int iy = 0; iy < f->getNY(); iy++){
-//            for (int iz = 0; iz < f->getNZ(); iz++){
-//
-//                double e, p, nb, nq, ns, vx, vy, vz, cs, T, mub, muq, mus;
-//                double e__0, p__0, nb__0, nq__0, ns__0, vx__0, vy__0, vz__0, cs__0, T__0, mub__0, muq__0, mus__0;
-//                double e_H, p_H, nb_H, nq_H, ns_H, vx_H, vy_H, vz_H, cs_H, T_H, mub_H, muq_H, mus_H;
-//                double eH, pH, nbH, nqH, nsH, vxH, vyH, vzH;
-//                //            double e_F;
-//
-//
-//                Cell *c = f->getCell(ix, iy, iz);
-//
-//                c -> getPrimVarQ0(eos, tau, e__0, p__0, nb__0, nq__0, ns__0, vx__0, vy__0, vz__0);
-//                c -> getPrimVarHCenterQ0(eos, tau, e_H, p_H, nb_H, nq_H, ns_H, vx_H, vy_H, vz_H);
-//                c -> getPrimVarHCenter(eos, tau, eH, pH, nbH, nqH, nsH, vxH, vyH, vzH, e_H, p_H, nb_H, nq_H, ns_H, vx_H, vy_H, vz_H);
-//                c -> getPrimVar(eos, tau, e, p, nb, nq, ns, vx, vy, vz, e__0, p__0, nb__0, nq__0, ns__0, vx__0, vy__0, vz__0);
-//                //            float e_do = e;
-//                cs = eos->cs();
-//                values.push_back(e);
-//
-////                cout << vx << "     " << p << "    " << f->getX(ix) << "    " << f->getY(iy) << "      " << e << "       " << cs << "     " << T << endl;
-////                cout << vx << "     " << p << "    " << f->getX(ix) << "      " << e << "       " << cs << "     " << T << endl;
-//
-//            }
-//        }
-//    }
-//    if (ctime>59.95 && ctime < 60.05) {
-//        for (int i=0; i<total; i++) {
-//            in[i].r = values.at(i);
-//            in[i].i = 0.;
+    ofstream myfile2;
+    myfile2.open ("ENERGY_CONSERVATION_60_100.dat", ios::app);
+    myfile2 << T_mean[0] << "      " << T_mean[1] << "     " << T_mean[2] << "     " << T_mean[3] << endl;
+    myfile2.close();
+
+//##################### FFT ################################
+    if (ctime>59.98) {
+        ofstream myfile;
+        kiss_fftnd_cfg cfg = kiss_fftnd_alloc(dims, 3, false, NULL, NULL);
+        kiss_fft_cpx *in = new kiss_fft_cpx[total];
+        kiss_fft_cpx *out = new kiss_fft_cpx[total];
+        for (int i=0; i<total; i++) {
+            in[i].r = values.at(i);
+            in[i].i = 0.;
 //            out[i].r = 0.;
 //            out[i].i = 0.;
-//        }
-//        kiss_fftnd(cfg, in, out);
-//        double xi_FT[nx][ny][nz];
-//        for (int ix=0; ix<nx; ix++) {
-//            for (int iy=0; iy<ny; iy++) {
-//                for (int iz=0; iz<nz; iz++) {
-//                    xi_FT[ix][iy][iz] = 0.;
-//                }
-//            }
-//        }
-//        int i = 0;
-//        for (int ix=0; ix<nx; ix++) {
-//            for (int iy=0; iy<ny; iy++) {
-//                for (int iz=0; iz<nz; iz++) {
+        }
+        kiss_fftnd(cfg, in, out);
+        free(cfg);
+        
+        double xi_FT[nx][ny][nz];
+        double phase[nx][ny][nz];
+                double S_K[nx];
+        for (int ix=0; ix<nx; ix++) {
+            //            S_K[ix] = 50.;
+            for (int iy=0; iy<ny; iy++) {
+                for (int iz=0; iz<nz; iz++) {
+                    xi_FT[ix][iy][iz] = 0.;
+//                    phase[ix][iy][iz] = 0.;
+                }
+            }
+        }
+        myfile.open ("FT_e_60_100.dat", ios::app);
+        int i = 0;
+        for (int ix=0; ix<nx; ix++) {
+//            int kx =ix;// (ix <= nx / 2) ? ix : ix - nx;//
+            for (int iy=0; iy<ny; iy++) {
+//                int ky =iy;// (iy <= ny / 2) ? iy : iy - ny;//
+                for (int iz=0; iz<nz; iz++) {
+//                    int kz =iz;// (iz <= nz / 2) ? iz : iz - nz;//
+//                    double k = sqrt(kx * kx + ky * ky + kz * kz);//
+                    // Compute the magnitude squared of the Fourier transform//
+//                    double S_k = 2*(out[ix * ny * nz + iy * nz + iz].r * out[ix * ny * nz + iy * nz + iz].r + out[ix * ny * nz + iy * nz + iz].i * out[ix * ny * nz + iy * nz + iz].i) / total;//
 //                    xi_FT[ix][iy][iz] = sqrt(out[i].r*out[i].r + out[i].i*out[i].i) / total;
-//                    i++;
-//                }
-//            }
-//        }
-//        double S[(nx+1)/2][(ny+1)/2][(nz+1)/2];
-//        for (int ix=0; ix<(nx+1)/2; ix++) {
-//            for (int iy=0; iy<(ny+1)/2; iy++) {
-//                for (int iz=0; iz<(nz+1)/2; iz++) {
-//                    S[ix][iy][iz] = 0.;
-//                }
-//            }
-//        }
-//        for (int ix=0; ix<(nx+1)/2; ix++) {
-//            for (int iy=0; iy<(ny+1)/2; iy++) {
-//                for (int iz=0; iz<(nz+1)/2; iz++) {
-//                    Struc[event][ix][iy][iz] = xi_FT[ix][iy][iz] * xi_FT[ix][iy][iz];
-//                    S[ix][iy][iz] = xi_FT[ix][iy][iz] * xi_FT[ix][iy][iz];
-//                    cout << event << endl;
-//                    cout << S[ix][iy][iz] << "   " << ix << "   " << iy << "    " << iz << endl;
-//                }
-//            }
-//        }
-//    }
+                    xi_FT[ix][iy][iz] = (out[i].r*out[i].r + out[i].i*out[i].i)/total;
+                    i++;
+                }
+            }
+        }
+        delete[] in;//
+        delete[] out;//
+        double S[(nx+1)/2][(ny+1)/2][(nz+1)/2];
+        for (int ix=0; ix<(nx+1)/2; ix++) {
+            for (int iy=0; iy<(ny+1)/2; iy++) {
+                for (int iz=0; iz<(nz+1)/2; iz++) {
+                    S[ix][iy][iz] = 0.;
+                }
+            }
+        }
+//        myfile.open ("/Users/jakub/Desktop/phd-data/FT_T00_big_grid10.dat", ios::app);
+        for (int ix=0; ix<nx/2+1; ix++) {
+            for (int iy=0; iy<ny/2+1; iy++) {
+                for (int iz=0; iz<nz/2+1; iz++) {
+//                    if (ix==0 && iy==0 && iz==0) {
+//                        S[ix][iy][iz] = xi_FT[ix][iy][iz];
+//                    }
+//                    else{
+//                        S[ix][iy][iz] = 2*xi_FT[ix][iy][iz];
+//                    }
+                    double absK = sqrt(ix*ix+iy*iy+iz*iz);
+                    myfile << ctime << "    " << xi_FT[ix][iy][iz] << "   " << ix << "   " << iy << "    " << iz << "    " << absK << endl;
+                }
+            }
+        }
+        myfile.close();
+    }
+//####################### FFT end ##################################
     
-    
-    
-//    const int nfft=256;
-//    vector<std::complex<float>> x(nfft, 0.0);
-//    vector<std::complex<float>> fx(nfft, 0.0);
-//    x[0]=1;
-//    x[1] = std::complex<float>(0,3);
-//
-//    kiss_fft_cfg cfg=kiss_fft_alloc(81,0,NULL,NULL);
-//    kiss_fft_cfg inv = kiss_fft_alloc(nfft,1,NULL,NULL);
-//
-//    kiss_fft(cfg, (kiss_fft_cpx*)&x[0], (kiss_fft_cpx*)&fx[0]);
-//    for (int k=0;k<nfft;++k) {
-//        fx[k] = fx[k] * conj(fx[k]);
-//        fx[k] *= 1./nfft;
-//    }
-//    kiss_fft(inv,(kiss_fft_cpx*)&fx[0],(kiss_fft_cpx*)&x[0]);
-//    cout
-//        << x[0] << ","
-//        << x[1] << ","
-//        << x[2] << ","
-//        << x[3] << " ... " << endl;
-//    kiss_fft(cfg,e_in,e_F);
-
-//    for (int ix = 0; ix < f->getNX(); ix++) {
-//        double mag = 2*sqrt(e_F[ix].r*e_F[ix].r+e_F[ix].i*e_F[ix].i) / 81.;
-//        cout << ix << " " << x[ix].r << " " << x[ix].i << "      " << k[ix].r << "   " << k[ix].i << endl;
-//        cout << ix << " " << e_in[ix].r << " " << e_in[ix].i << "      " << e_F[ix].r << "   " << e_F[ix].i << endl;
-//        cout << ix << "  " << e_in[ix].r << "   " << e_F[ix].r << "   " << e_F[ix].i << "       " << mag << endl;
-
-//    }
-//    for (int i=0; i<10000; i++) {
-//        double value = woods_saxon();
-//        cout << value << endl;
-//    }
-
  //-----PREDICTOR-ideal
  for (int iy = 0; iy < f->getNY(); iy++)
   for (int iz = 0; iz < f->getNZ(); iz++)
@@ -1620,21 +1574,21 @@ void Hydro::performStep(double ctime) {
  for (int iy = 0; iy < f->getNY(); iy++)
   for (int iz = 0; iz < f->getNZ(); iz++)
    for (int ix = 0; ix < f->getNX(); ix++) {
-    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix + 1, iy, iz), X_, PREDICT, ix);
+    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix + 1, iy, iz), X_, PREDICT, ix, iy, iz);
    }
  //    cout << "predictor X done\n" ;
  // Y dir
  for (int iz = 0; iz < f->getNZ(); iz++)
   for (int ix = 0; ix < f->getNX(); ix++)
    for (int iy = 0; iy < f->getNY(); iy++) {
-    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix, iy + 1, iz), Y_, PREDICT, ix);
+    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix, iy + 1, iz), Y_, PREDICT, ix, iy, iz);
    }
  //    cout << "predictor Y done\n" ;
  // Z dir
  for (int ix = 0; ix < f->getNX(); ix++)
   for (int iy = 0; iy < f->getNY(); iy++)
    for (int iz = 0; iz < f->getNZ(); iz++) {
-    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix, iy, iz + 1), Z_, PREDICT, ix);
+    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix, iy, iz + 1), Z_, PREDICT, ix, iy, iz);
    }
  //    cout << "predictor Z done\n" ;
 
@@ -1643,6 +1597,16 @@ void Hydro::performStep(double ctime) {
    for (int ix = 0; ix < f->getNX(); ix++) {
     Cell *c = f->getCell(ix, iy, iz);
     source_step(ix, iy, iz, PREDICT);
+//       double T[7];
+//       double F[7];
+//       c->getQ(T);
+//       c->getFlux(F);
+//        if (abs(T[0]+F[0]) > 1.) {
+//            double Q_corr[7] = {0.5*T[0], 0.5*T[1], 0.5*T[2], 0.5*T[3], 0.5*T[4], 0.5*T[5], 0.5*T[6]};
+//            c->setQ(Q_corr);
+////            c->setPrimVar(eos, tau, 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.);
+//            c->setFlux(0.1*F[0],0.1*F[1],0.1*F[2],0.1*F[3],0.,0.,0.);
+//        }
     c->updateQtoQhByFlux();
     c->clearFlux();
    }
@@ -1654,21 +1618,21 @@ void Hydro::performStep(double ctime) {
  for (int iy = 0; iy < f->getNY(); iy++)
   for (int iz = 0; iz < f->getNZ(); iz++)
    for (int ix = 0; ix < f->getNX(); ix++) {
-    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix + 1, iy, iz), X_, CORRECT, ix);
+    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix + 1, iy, iz), X_, CORRECT, ix, iy, iz);
    }
  //    cout << "corrector X done\n" ;
  // Y dir
  for (int iz = 0; iz < f->getNZ(); iz++)
   for (int ix = 0; ix < f->getNX(); ix++)
    for (int iy = 0; iy < f->getNY(); iy++) {
-    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix, iy + 1, iz), Y_, CORRECT, ix);
+    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix, iy + 1, iz), Y_, CORRECT, ix, iy, iz);
    }
  //    cout << "corrector Y done\n" ;
  // Z dir
  for (int ix = 0; ix < f->getNX(); ix++)
   for (int iy = 0; iy < f->getNY(); iy++)
    for (int iz = 0; iz < f->getNZ(); iz++) {
-    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix, iy, iz + 1), Z_, CORRECT, ix);
+    hlle_flux(f->getCell(ix, iy, iz), f->getCell(ix, iy, iz + 1), Z_, CORRECT, ix, iy, iz);
    }
  //    cout << "corrector Z done\n" ;
 
@@ -1677,6 +1641,16 @@ void Hydro::performStep(double ctime) {
    for (int ix = 0; ix < f->getNX(); ix++) {
     Cell *c = f->getCell(ix, iy, iz);
     source_step(ix, iy, iz, CORRECT);
+//       double T[7];
+//       double F[7];
+//       c->getQ(T);
+//       c->getFlux(F);
+//        if (abs(T[0]+F[0]) > 1.) {
+//            double Q_corr[7] = {0.5*T[0], 0.5*T[1], 0.5*T[2], 0.5*T[3], 0.5*T[4], 0.5*T[5], 0.5*T[6]};
+//            c->setQ(Q_corr);
+////            c->setPrimVar(eos, tau, 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.);
+//            c->setFlux(0.1*F[0],0.1*F[1],0.1*F[2],0.1*F[3],0.,0.,0.);
+//        }
     c->updateByFlux();
     c->clearFlux();
    }
@@ -1687,6 +1661,20 @@ void Hydro::performStep(double ctime) {
  #endif
  //f->correctImagCells();  // disabled in box mode
 
+//    for (int iy = 0; iy < f->getNY(); iy++)
+//     for (int iz = 0; iz < f->getNZ(); iz++)
+//      for (int ix = 0; ix < f->getNX(); ix++) {
+//          Cell *c = f->getCell(ix, iy, iz);
+//          double T[7];
+//          c->getQ(T);
+//          if (T[0]<-1.) {
+//              cout << "after" << endl;
+//              cout << T[0] << "     " << xi00_cell[ix][iy][iz][1][1] << "     " << xi00_cell[ix][iy][iz][1][2] << "     " << xi00_cell[ix][iy][iz][1][3] << "     " << xi00_cell[ix][iy][iz][2][2] << "     " << xi00_cell[ix][iy][iz][2][3] << "     " << xi00_cell[ix][iy][iz][3][3] << endl;
+//          }
+//      }
+    
+    
+    
  //===== viscous part ======
  if (trcoeff->isViscous()) {
   ISformal();  // evolution of viscous quantities according to IS equations
@@ -1717,10 +1705,42 @@ void Hydro::performStep(double ctime) {
   for (int iy = 0; iy < f->getNY(); iy++)
    for (int iz = 0; iz < f->getNZ(); iz++)
     for (int ix = 0; ix < f->getNX(); ix++) {
+        Cell *c = f->getCell(ix, iy, iz);
      visc_source_step(ix, iy, iz);
+//        double T[7];
+//        double F[7];
+//        c->getQ(T);
+//        c->getFlux(F);
+//         if (abs(T[0]+F[0]) > 1.) {
+//             double Q_corr[7] = {0.5*T[0], 0.5*T[1], 0.5*T[2], 0.5*T[3], 0.5*T[4], 0.5*T[5], 0.5*T[6]};
+//             c->setQ(Q_corr);
+////             c->setPrimVar(eos, tau, 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.);
+//             c->setFlux(0.1*F[0],0.1*F[1],0.1*F[2],0.1*F[3],0.,0.,0.);
+//         }
      f->getCell(ix, iy, iz)->updateByViscFlux();
      f->getCell(ix, iy, iz)->clearFlux();
     }
+//     for (int iy = 0; iy < f->getNY(); iy++)
+//      for (int iz = 0; iz < f->getNZ(); iz++)
+//       for (int ix = 0; ix < f->getNX(); ix++) {
+//           Cell *c = f->getCell(ix, iy, iz);
+////           double T[7];
+////           c->getQ(T);
+////           if (T[0]<-1.) {
+////               cout << "visc" << endl;
+////               cout << T[0] << "     " << xi00_cell[ix][iy][iz][1][1] << "     " << xi00_cell[ix][iy][iz][1][2] << "     " << xi00_cell[ix][iy][iz][1][3] << "     " << xi00_cell[ix][iy][iz][2][2] << "     " << xi00_cell[ix][iy][iz][2][3] << "     " << xi00_cell[ix][iy][iz][3][3] << endl;
+////           }
+//           double T[7];
+//           double F[7];
+//           c->getQ(T);
+//           c->getFlux(F);
+//            if (abs(T[0]+F[0]) > 1.) {
+//                double Q_corr[7] = {0.5*T[0], 0.5*T[1], 0.5*T[2], 0.5*T[3], 0.5*T[4], 0.5*T[5], 0.5*T[6]};
+//                c->setQ(Q_corr);
+////                c->setPrimVar(eos, tau, 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.);
+////                c->setFlux(0.1*F[0],0.1*F[1],0.1*F[2],0.1*F[3],0.,0.,0.);
+//            }
+//       }
  } else {  // end viscous part
  }
  //==== finishing work ====

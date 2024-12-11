@@ -166,7 +166,7 @@ void IcBox::setIC(Fluid* f, EoS* eos) {
        vx = 0.; // initial velocity
        vy = vz = 0.;
        double deltaE = 0.;
-//       double deltaE = 0.;
+//       double deltaE = 0.01*sin(2 * M_PI / L * x );
        
 //        diagonal xy
 //       vx = 0.;
