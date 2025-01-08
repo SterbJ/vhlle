@@ -89,7 +89,7 @@ void Hydro::setDtau(double deltaTau) {
  }
 }
 
-void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix, int iy, int iz) {
+void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix, int iy, int iz, int N_id) {
  // for all variables, suffix "l" = left state, "r" = right state
  // with respect to the cell boundary
  // idea is that e.g. el corresponds to the fluctuation
@@ -144,38 +144,18 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix, 
 // if (d_el < -el_bck || el_bck < 0.) {//modified condition - do we allow fluctuations in empty cell?
 //     d_el = -el_bck;
 //     d_pl = -pl_bck;
-//     left->setPrimVar(eos, tau, d_el, d_pl, 0., 0., 0., 0., 0., el_bck, vxl_bck, vyl_bck, vzl_bck);
-//     left->getPrimVarRight(eos, tau, d_el, d_pl, d_nbl, d_nql, d_nsl, d_vxl, d_vyl, d_vzl,
-//                            direction, el_bck, pl_bck, nbl_bck, nql_bck, nsl_bck, vxl_bck, vyl_bck, vzl_bck);
-////     left->setFlux(0.,0.,0.,0.,0.,0.,0.);
-////     right->setFlux(0.,0.,0.,0.,0.,0.,0.);
 // }
 // if (d_er < -er_bck || er_bck < 0.) {//modified condition
 //     d_er = -er_bck;
 //     d_pr = -pr_bck;
-//     right->setPrimVar(eos, tau, d_er, d_pr, 0., 0., 0., 0., 0., er_bck, vxr_bck, vyr_bck, vzr_bck);
-//     right->getPrimVarLeft(eos, tau, d_er, d_pr, d_nbr, d_nqr, d_nsr, d_vxr, d_vyr, d_vzr,
-//                            direction, er_bck, pr_bck, nbr_bck, nqr_bck, nsr_bck, vxr_bck, vyr_bck, vzr_bck);
-////     left->setFlux(0.,0.,0.,0.,0.,0.,0.);
-////     right->setFlux(0.,0.,0.,0.,0.,0.,0.);
 // }
 //    if (d_el > el_bck) {//modified condition - do we allow fluctuations in empty cell?
 //        d_el = el_bck;
 //        d_pl = pl_bck;
-//        left->setPrimVar(eos, tau, d_el, d_pl, 0., 0., 0., 0., 0., el_bck, vxl_bck, vyl_bck, vzl_bck);
-//        left->getPrimVarRight(eos, tau, d_el, d_pl, d_nbl, d_nql, d_nsl, d_vxl, d_vyl, d_vzl,
-//                               direction, el_bck, pl_bck, nbl_bck, nql_bck, nsl_bck, vxl_bck, vyl_bck, vzl_bck);
-//   //     left->setFlux(0.,0.,0.,0.,0.,0.,0.);
-//   //     right->setFlux(0.,0.,0.,0.,0.,0.,0.);
 //    }
 //    if (d_er > er_bck) {//modified condition
 //        d_er = er_bck;
 //        d_pr = pr_bck;
-//        right->setPrimVar(eos, tau, d_er, d_pr, 0., 0., 0., 0., 0., er_bck, vxr_bck, vyr_bck, vzr_bck);
-//        right->getPrimVarLeft(eos, tau, d_er, d_pr, d_nbr, d_nqr, d_nsr, d_vxr, d_vyr, d_vzr,
-//                               direction, er_bck, pr_bck, nbr_bck, nqr_bck, nsr_bck, vxr_bck, vyr_bck, vzr_bck);
-//   //     left->setFlux(0.,0.,0.,0.,0.,0.,0.);
-//   //     right->setFlux(0.,0.,0.,0.,0.,0.,0.);
 //    }
 
  if (d_el+el_bck > 1e10 || el_bck > 1e10) {//modified condition
@@ -1002,11 +982,6 @@ void Hydro::ISformal() {
                 std::mt19937 gen(rd());
                 double mean = 0.;
                 double sigma = sqrt(2 * eta_bck * T_bck * (delta[i][i] * delta[j][j] + delta[i][j] * delta[j][i])) / (sqrt(dt) * pow(volume, 1./2.)) * sqrt(0.197);
-//                double sigma = sqrt(2 * eta_bck * T_bck * (delta[i][i] * delta[j][j] + delta[i][j] * delta[j][i])) / (sqrt(dt) * pow(volume, 1./2.)) * 0.197 * 0.197;
-//                cout << eta_bck << endl;
-//                if (i==1 && j==1) {
-//                    cout << sigma << endl;
-//                }
                 std::normal_distribution<double> d(mean, sigma);
                 xi[i][j] = d(gen);
                 if (i!=j) {
@@ -1023,13 +998,6 @@ void Hydro::ISformal() {
                 if (i==j && i!=0) {
                     xi[i][j] -= 1./3. * Trxi;
                 }
-            }
-        }
-//        cout << "Trxi:  " << xi[0][0] + xi[1][1] + xi[2][2] + xi[3][3] << endl;
-//        xi00_cell[ix][iy][iz]=xi[0][0] * dt / 2.0 / gamma / taupi_bck;
-        for (int i=0; i<4; i++) {
-            for (int j=0; j<4; j++) {
-                xi00_cell[ix][iy][iz][i][j]=xi[i][j];
             }
         }
         //######################
@@ -1434,28 +1402,19 @@ void Hydro::performStep(double ctime) {
     int total = nx * ny * nz;
     int dims[3] = {nx, ny, nz};
     double T00=0.;
-    double T_mean[7];
-
+    double T_mean[7]={0.,0.,0.,0.,0.,0.,0.};
+    
 //  Some stuff to print out the values
     std::vector<double> values; // vector for FFT
     for (int ix = 0; ix < f->getNX(); ix++) {
         for (int iy = 0; iy < f->getNY(); iy++){
             for (int iz = 0; iz < f->getNZ(); iz++){
-
 //                double T00=0.;
                 double e, p, nb, nq, ns, vx, vy, vz, cs, T, mub, muq, mus;
                 double e__0, p__0, nb__0, nq__0, ns__0, vx__0, vy__0, vz__0, cs__0, T__0, mub__0, muq__0, mus__0;
-
                 Cell *c = f->getCell(ix, iy, iz);
-
                 c -> getPrimVarQbck(eos, tau, e__0, p__0, nb__0, nq__0, ns__0, vx__0, vy__0, vz__0);
                 c -> getPrimVar(eos, tau, e, p, nb, nq, ns, vx, vy, vz, e__0, p__0, nb__0, nq__0, ns__0, vx__0, vy__0, vz__0);
-                
-//                if (abs(e) > e__0 || e__0 < 0.) {//modified condition - do we allow fluctuations in empty cell?
-//                    c->setPrimVar(eos, tau, 0., 0., 0., 0., 0., 0., 0., e__0, vx__0, vy__0, vz__0);
-//                    c->getPrimVar(eos, tau, e, p, nb, nq, ns, vx, vy, vz, e__0, p__0, nb__0, nq__0, ns__0, vx__0, vy__0, vz__0);
-//                }
-                
 //                cs = eos->cs();
                 eos->eos(e__0, nb__0, nq__0, ns__0, T__0, mub, muq, mus, p__0);
                 double Tmunu[7];
@@ -1465,22 +1424,15 @@ void Hydro::performStep(double ctime) {
                 double T00id = Tmunu[0];
                 double T00visc = c->getpi0(0, 0);// nebo H?
 //                cout << T_bck[0] << endl;
-//                double fluc = xi00_cell[ix][iy][iz];
 //                cout << ctime << "  " << T00id << "     " << c->getpiH(0, 0) << "     " << c->getpi(0, 0) << "     " << xi00_cell[ix][iy][iz] << "    " << ix << "    " << iy << "    " << iz << endl;
                 T00 += T00id + T00visc;
                 for (int i=0; i<7; i++) {
                     T_mean[i] += Tmunu[i]/total;
                 }
-                double F[7];
-//                c->getFlux(F);
-//                cout << T00/total << endl;
-//                cout << T__0 << endl;
 //                double etaS, zetaS;
 //                trcoeff->getEta(e__0, nb__0, T__0, etaS, zetaS);
 //                values.push_back(T00);//toto
-//                cout << e << endl;
                   values.push_back(e);//toto
-//                trcoeff->getTau()????
             }
         }
     }
@@ -1508,7 +1460,6 @@ void Hydro::performStep(double ctime) {
         double phase[nx][ny][nz];
                 double S_K[nx];
         for (int ix=0; ix<nx; ix++) {
-            //            S_K[ix] = 50.;
             for (int iy=0; iy<ny; iy++) {
                 for (int iz=0; iz<nz; iz++) {
                     xi_FT[ix][iy][iz] = 0.;
@@ -1519,15 +1470,8 @@ void Hydro::performStep(double ctime) {
         myfile.open ("FT_e_60_100.dat", ios::app);
         int i = 0;
         for (int ix=0; ix<nx; ix++) {
-//            int kx =ix;// (ix <= nx / 2) ? ix : ix - nx;//
             for (int iy=0; iy<ny; iy++) {
-//                int ky =iy;// (iy <= ny / 2) ? iy : iy - ny;//
                 for (int iz=0; iz<nz; iz++) {
-//                    int kz =iz;// (iz <= nz / 2) ? iz : iz - nz;//
-//                    double k = sqrt(kx * kx + ky * ky + kz * kz);//
-                    // Compute the magnitude squared of the Fourier transform//
-//                    double S_k = 2*(out[ix * ny * nz + iy * nz + iz].r * out[ix * ny * nz + iy * nz + iz].r + out[ix * ny * nz + iy * nz + iz].i * out[ix * ny * nz + iy * nz + iz].i) / total;//
-//                    xi_FT[ix][iy][iz] = sqrt(out[i].r*out[i].r + out[i].i*out[i].i) / total;
                     xi_FT[ix][iy][iz] = (out[i].r*out[i].r + out[i].i*out[i].i)/total;
                     i++;
                 }
@@ -1535,24 +1479,10 @@ void Hydro::performStep(double ctime) {
         }
         delete[] in;//
         delete[] out;//
-        double S[(nx+1)/2][(ny+1)/2][(nz+1)/2];
-        for (int ix=0; ix<(nx+1)/2; ix++) {
-            for (int iy=0; iy<(ny+1)/2; iy++) {
-                for (int iz=0; iz<(nz+1)/2; iz++) {
-                    S[ix][iy][iz] = 0.;
-                }
-            }
-        }
-//        myfile.open ("/Users/jakub/Desktop/phd-data/FT_T00_big_grid10.dat", ios::app);
+
         for (int ix=0; ix<nx/2+1; ix++) {
             for (int iy=0; iy<ny/2+1; iy++) {
                 for (int iz=0; iz<nz/2+1; iz++) {
-//                    if (ix==0 && iy==0 && iz==0) {
-//                        S[ix][iy][iz] = xi_FT[ix][iy][iz];
-//                    }
-//                    else{
-//                        S[ix][iy][iz] = 2*xi_FT[ix][iy][iz];
-//                    }
                     double absK = sqrt(ix*ix+iy*iy+iz*iz);
                     myfile << ctime << "    " << xi_FT[ix][iy][iz] << "   " << ix << "   " << iy << "    " << iz << "    " << absK << endl;
                 }
@@ -1597,16 +1527,6 @@ void Hydro::performStep(double ctime) {
    for (int ix = 0; ix < f->getNX(); ix++) {
     Cell *c = f->getCell(ix, iy, iz);
     source_step(ix, iy, iz, PREDICT);
-//       double T[7];
-//       double F[7];
-//       c->getQ(T);
-//       c->getFlux(F);
-//        if (abs(T[0]+F[0]) > 1.) {
-//            double Q_corr[7] = {0.5*T[0], 0.5*T[1], 0.5*T[2], 0.5*T[3], 0.5*T[4], 0.5*T[5], 0.5*T[6]};
-//            c->setQ(Q_corr);
-////            c->setPrimVar(eos, tau, 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.);
-//            c->setFlux(0.1*F[0],0.1*F[1],0.1*F[2],0.1*F[3],0.,0.,0.);
-//        }
     c->updateQtoQhByFlux();
     c->clearFlux();
    }
@@ -1641,16 +1561,6 @@ void Hydro::performStep(double ctime) {
    for (int ix = 0; ix < f->getNX(); ix++) {
     Cell *c = f->getCell(ix, iy, iz);
     source_step(ix, iy, iz, CORRECT);
-//       double T[7];
-//       double F[7];
-//       c->getQ(T);
-//       c->getFlux(F);
-//        if (abs(T[0]+F[0]) > 1.) {
-//            double Q_corr[7] = {0.5*T[0], 0.5*T[1], 0.5*T[2], 0.5*T[3], 0.5*T[4], 0.5*T[5], 0.5*T[6]};
-//            c->setQ(Q_corr);
-////            c->setPrimVar(eos, tau, 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.);
-//            c->setFlux(0.1*F[0],0.1*F[1],0.1*F[2],0.1*F[3],0.,0.,0.);
-//        }
     c->updateByFlux();
     c->clearFlux();
    }
@@ -1661,20 +1571,6 @@ void Hydro::performStep(double ctime) {
  #endif
  //f->correctImagCells();  // disabled in box mode
 
-//    for (int iy = 0; iy < f->getNY(); iy++)
-//     for (int iz = 0; iz < f->getNZ(); iz++)
-//      for (int ix = 0; ix < f->getNX(); ix++) {
-//          Cell *c = f->getCell(ix, iy, iz);
-//          double T[7];
-//          c->getQ(T);
-//          if (T[0]<-1.) {
-//              cout << "after" << endl;
-//              cout << T[0] << "     " << xi00_cell[ix][iy][iz][1][1] << "     " << xi00_cell[ix][iy][iz][1][2] << "     " << xi00_cell[ix][iy][iz][1][3] << "     " << xi00_cell[ix][iy][iz][2][2] << "     " << xi00_cell[ix][iy][iz][2][3] << "     " << xi00_cell[ix][iy][iz][3][3] << endl;
-//          }
-//      }
-    
-    
-    
  //===== viscous part ======
  if (trcoeff->isViscous()) {
   ISformal();  // evolution of viscous quantities according to IS equations
@@ -1707,40 +1603,10 @@ void Hydro::performStep(double ctime) {
     for (int ix = 0; ix < f->getNX(); ix++) {
         Cell *c = f->getCell(ix, iy, iz);
      visc_source_step(ix, iy, iz);
-//        double T[7];
-//        double F[7];
-//        c->getQ(T);
-//        c->getFlux(F);
-//         if (abs(T[0]+F[0]) > 1.) {
-//             double Q_corr[7] = {0.5*T[0], 0.5*T[1], 0.5*T[2], 0.5*T[3], 0.5*T[4], 0.5*T[5], 0.5*T[6]};
-//             c->setQ(Q_corr);
-////             c->setPrimVar(eos, tau, 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.);
-//             c->setFlux(0.1*F[0],0.1*F[1],0.1*F[2],0.1*F[3],0.,0.,0.);
-//         }
      f->getCell(ix, iy, iz)->updateByViscFlux();
      f->getCell(ix, iy, iz)->clearFlux();
     }
-//     for (int iy = 0; iy < f->getNY(); iy++)
-//      for (int iz = 0; iz < f->getNZ(); iz++)
-//       for (int ix = 0; ix < f->getNX(); ix++) {
-//           Cell *c = f->getCell(ix, iy, iz);
-////           double T[7];
-////           c->getQ(T);
-////           if (T[0]<-1.) {
-////               cout << "visc" << endl;
-////               cout << T[0] << "     " << xi00_cell[ix][iy][iz][1][1] << "     " << xi00_cell[ix][iy][iz][1][2] << "     " << xi00_cell[ix][iy][iz][1][3] << "     " << xi00_cell[ix][iy][iz][2][2] << "     " << xi00_cell[ix][iy][iz][2][3] << "     " << xi00_cell[ix][iy][iz][3][3] << endl;
-////           }
-//           double T[7];
-//           double F[7];
-//           c->getQ(T);
-//           c->getFlux(F);
-//            if (abs(T[0]+F[0]) > 1.) {
-//                double Q_corr[7] = {0.5*T[0], 0.5*T[1], 0.5*T[2], 0.5*T[3], 0.5*T[4], 0.5*T[5], 0.5*T[6]};
-//                c->setQ(Q_corr);
-////                c->setPrimVar(eos, tau, 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.);
-////                c->setFlux(0.1*F[0],0.1*F[1],0.1*F[2],0.1*F[3],0.,0.,0.);
-//            }
-//       }
+     cout << N_id << "      " << N_visc << endl;
  } else {  // end viscous part
  }
  //==== finishing work ====

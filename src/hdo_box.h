@@ -17,7 +17,7 @@ private:
  #endif
  double tau_z;    // effective value of the proper time used in 1/tau factors in
                   // the fluxes. Used to increase the accuracy
-    double xi00_cell[31][31][31][4][4];
+//    double xi00_cell[31][31][31][4][4];
 public:
  Hydro(Fluid *_f, EoS *_eos, TransportCoeff *_trcoeff, double _t0, double _dt);
  ~Hydro();
@@ -30,9 +30,9 @@ public:
  // mode: PREDICT = used in predictor step; calculates fluxes for dt/2
  // CORRECT = used in corrector step, calculates fluxes based on predicted
  // half-step quantities
- void hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix, int iy, int iz);
+ void hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix, int iy, int iz, int N_id);
  // viscous flux \delta F
- void visc_flux(Cell *left, Cell *right, int direction, int ix, int iy, int iz);
+ void visc_flux(Cell *left, Cell *right, int direction, int ix, int iy, int iz, int N_visc);
  // viscous source step for a given cell (ix,iy,iz)
  void visc_source_step(int ix, int iy, int iz);
  void source(double tau, double x, double y, double z, double d_Q[7],
