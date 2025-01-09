@@ -30,9 +30,9 @@ public:
  // mode: PREDICT = used in predictor step; calculates fluxes for dt/2
  // CORRECT = used in corrector step, calculates fluxes based on predicted
  // half-step quantities
- void hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix, int iy, int iz, int N_id);
+ void hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix, int iy, int iz);
  // viscous flux \delta F
- void visc_flux(Cell *left, Cell *right, int direction, int ix, int iy, int iz, int N_visc);
+ void visc_flux(Cell *left, Cell *right, int direction, int ix, int iy, int iz);
  // viscous source step for a given cell (ix,iy,iz)
  void visc_source_step(int ix, int iy, int iz);
  void source(double tau, double x, double y, double z, double d_Q[7],
