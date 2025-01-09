@@ -89,7 +89,7 @@ void Hydro::setDtau(double deltaTau) {
  }
 }
 
-void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix, int iy, int iz, int N_id) {
+void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix, int iy, int iz) {
  // for all variables, suffix "l" = left state, "r" = right state
  // with respect to the cell boundary
  // idea is that e.g. el corresponds to the fluctuation
