@@ -1606,7 +1606,6 @@ void Hydro::performStep(double ctime) {
      f->getCell(ix, iy, iz)->updateByViscFlux();
      f->getCell(ix, iy, iz)->clearFlux();
     }
-     cout << N_id << "      " << N_visc << endl;
  } else {  // end viscous part
  }
  //==== finishing work ====
