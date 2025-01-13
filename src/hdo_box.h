@@ -18,6 +18,8 @@ private:
  double tau_z;    // effective value of the proper time used in 1/tau factors in
                   // the fluxes. Used to increase the accuracy
 //    double xi00_cell[31][31][31][4][4];
+    int N_id=0;
+    int N_visc=0;
 public:
  Hydro(Fluid *_f, EoS *_eos, TransportCoeff *_trcoeff, double _t0, double _dt);
  ~Hydro();

@@ -372,6 +372,8 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix, 
      if ((abs(Tl[0]/6 - d_flux[0]) > 1./6) || (abs(Tr[0]/6 + d_flux[0]) > 1./6)) {
          left->addFlux(0., -d_flux[X_], -d_flux[Y_], -d_flux[Z_], 0., 0., 0.);
          right->addFlux(0., d_flux[X_], d_flux[Y_], d_flux[Z_], 0., 0., 0.);
+         N_id++;
+//         cout << "id" << endl;
      }
      else{
          left->addFlux(-d_flux[T_], -d_flux[X_], -d_flux[Y_], -d_flux[Z_], -d_flux[NB_],
@@ -1383,6 +1385,8 @@ void Hydro::visc_flux(Cell *left, Cell *right, int direction, int ix, int iy, in
             if ((abs(Tl[0]/6 - d_flux[0]) > 1./6) || (abs(Tr[0]/6 + d_flux[0]) > 1./6)) {
                  left->addFlux(0., -d_flux[X_], -d_flux[Y_], -d_flux[Z_], 0., 0., 0.);
                  right->addFlux(0., d_flux[X_], d_flux[Y_], d_flux[Z_], 0., 0., 0.);
+                N_visc++;
+//                cout << "v" << endl;
              }
              else{
                  left->addFlux(-d_flux[T_], -d_flux[X_], -d_flux[Y_], -d_flux[Z_], 0., 0., 0.);
@@ -1403,6 +1407,7 @@ void Hydro::performStep(double ctime) {
     int dims[3] = {nx, ny, nz};
     double T00=0.;
     double T_mean[7]={0.,0.,0.,0.,0.,0.,0.};
+    double variance_e = 0.;
     
 //  Some stuff to print out the values
     std::vector<double> values; // vector for FFT
@@ -1432,10 +1437,16 @@ void Hydro::performStep(double ctime) {
 //                double etaS, zetaS;
 //                trcoeff->getEta(e__0, nb__0, T__0, etaS, zetaS);
 //                values.push_back(T00);//toto
-                  values.push_back(e);//toto
+                variance_e = e*e/total - e*e/total/total;
+                values.push_back(e);//toto
             }
         }
     }
+    ofstream myfile3;
+    myfile3.open ("variance_e.dat", ios::app);
+    myfile3 << ctime << "      " << variance_e << endl;
+    myfile3.close();
+    
     ofstream myfile2;
     myfile2.open ("ENERGY_CONSERVATION_60_100.dat", ios::app);
     myfile2 << T_mean[0] << "      " << T_mean[1] << "     " << T_mean[2] << "     " << T_mean[3] << endl;
@@ -1606,6 +1617,9 @@ void Hydro::performStep(double ctime) {
      f->getCell(ix, iy, iz)->updateByViscFlux();
      f->getCell(ix, iy, iz)->clearFlux();
     }
+     cout << N_id << "      " << N_visc << endl;
+     N_id = 0;
+     N_visc = 0;
  } else {  // end viscous part
  }
  //==== finishing work ====
