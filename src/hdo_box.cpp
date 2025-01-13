@@ -369,7 +369,7 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix, 
     double Tr[7];
     left->getQ(Tl);
     right->getQ(Tr);
-     if ((abs(Tl[0]/6 - d_flux[0]) > 1./6) || (abs(Tr[0]/6 + d_flux[0]) > 1./6)) {
+     if ((abs(Tl[0]/6 - d_flux[0]) > el_bck/6) || (abs(Tr[0]/6 + d_flux[0]) > er_bck/6)) {
          left->addFlux(0., -d_flux[X_], -d_flux[Y_], -d_flux[Z_], 0., 0., 0.);
          right->addFlux(0., d_flux[X_], d_flux[Y_], d_flux[Z_], 0., 0., 0.);
          N_id++;
@@ -1382,7 +1382,7 @@ void Hydro::visc_flux(Cell *left, Cell *right, int direction, int ix, int iy, in
             double Tr[7];
             left->getQ(Tl);
             right->getQ(Tr);
-            if ((abs(Tl[0]/6 - d_flux[0]) > 1./6) || (abs(Tr[0]/6 + d_flux[0]) > 1./6)) {
+            if ((abs(Tl[0]/6 - d_flux[0]) > el_bck/6) || (abs(Tr[0]/6 + d_flux[0]) > er_bck/6)) {
                  left->addFlux(0., -d_flux[X_], -d_flux[Y_], -d_flux[Z_], 0., 0., 0.);
                  right->addFlux(0., d_flux[X_], d_flux[Y_], d_flux[Z_], 0., 0., 0.);
                 N_visc++;
