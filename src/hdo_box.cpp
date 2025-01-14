@@ -377,8 +377,8 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix, 
     }
     for (int i=1; i<4; i++) {
         if ((abs(Tl[i] - d_flux[i]) > abs(Tl[0] - d_flux[0])/2./sqrt(3.)) || (abs(Tr[i] + d_flux[i]) > abs(Tr[0] + d_flux[0])/2./sqrt(3.))) {
-            double max = max( abs( (Tl[i] - d_flux[i])/(Tl[0] - d_flux[0]) ), abs( (Tr[i] + d_flux[i])/(Tr[0] + d_flux[0]) ) );
-            d_flux[i] = d_flux[i] / max * 0.9;
+            double maximum = std::max( abs( (Tl[i] - d_flux[i])/(Tl[0] - d_flux[0]) ), abs( (Tr[i] + d_flux[i])/(Tr[0] + d_flux[0]) ) );
+            d_flux[i] = d_flux[i] / maximum * 0.9;
         }
     }
          left->addFlux(-d_flux[T_], -d_flux[X_], -d_flux[Y_], -d_flux[Z_], 0., 0., 0.);
@@ -1392,8 +1392,8 @@ void Hydro::visc_flux(Cell *left, Cell *right, int direction, int ix, int iy, in
             }
             for (int i=1; i<4; i++) {
                 if ((abs(Tl[i] - d_flux[i]) > abs(Tl[0] - d_flux[0])/2./sqrt(3.)) || (abs(Tr[i] + d_flux[i]) > abs(Tr[0] + d_flux[0])/2./sqrt(3.))) {
-                    double max = max( abs( (Tl[i] - d_flux[i])/(Tl[0] - d_flux[0]) ), abs( (Tr[i] + d_flux[i])/(Tr[0] + d_flux[0]) ) );
-                    d_flux[i] = d_flux[i] / max * 0.9;
+                    double maximum = std::max( abs( (Tl[i] - d_flux[i])/(Tl[0] - d_flux[0]) ), abs( (Tr[i] + d_flux[i])/(Tr[0] + d_flux[0]) ) );
+                    d_flux[i] = d_flux[i] / maximum * 0.9;
                 }
             }
 //             else{
