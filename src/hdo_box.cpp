@@ -370,8 +370,8 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix, 
     left->getQ(Tl);
     right->getQ(Tr);
     if ((abs(Tl[0]/6 - d_flux[0]) > el_bck/6) || (abs(Tr[0]/6 + d_flux[0]) > er_bck/6)) {
-        double max = max( abs( (Tl[0]/6 - d_flux[0])/el_bck/6 ), abs( (Tr[0]/6 + d_flux[0])/er_bck/6 ) );
-        d_flux[0] = d_flux[0] / max * 0.9;
+        double maximum = std::max( abs( (Tl[0]/6 - d_flux[0])/el_bck/6 ), abs( (Tr[0]/6 + d_flux[0])/er_bck/6 ) );
+        d_flux[0] = d_flux[0] / maximum * 0.9;
         N_id++;
         //                cout << "v" << endl;
     }
@@ -1385,8 +1385,8 @@ void Hydro::visc_flux(Cell *left, Cell *right, int direction, int ix, int iy, in
             left->getQ(Tl);
             right->getQ(Tr);
             if ((abs(Tl[0]/6 - d_flux[0]) > el_bck/6) || (abs(Tr[0]/6 + d_flux[0]) > er_bck/6)) {
-                double max = max( abs( (Tl[0]/6 - d_flux[0])/el_bck/6 ), abs( (Tr[0]/6 + d_flux[0])/er_bck/6 ) );
-                d_flux[0] = d_flux[0] / max * 0.9;
+                double maximum = std::max( abs( (Tl[0]/6 - d_flux[0])/el_bck/6 ), abs( (Tr[0]/6 + d_flux[0])/er_bck/6 ) );
+                d_flux[0] = d_flux[0] / maximum * 0.9;
                 N_visc++;
                 //                cout << "v" << endl;
             }
