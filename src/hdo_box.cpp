@@ -369,18 +369,20 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix, 
     double Tr[7];
     left->getQ(Tl);
     right->getQ(Tr);
-     if ((abs(Tl[0]/6 - d_flux[0]) > el_bck/6) || (abs(Tr[0]/6 + d_flux[0]) > er_bck/6)) {
-         left->addFlux(0., -d_flux[X_], -d_flux[Y_], -d_flux[Z_], 0., 0., 0.);
-         right->addFlux(0., d_flux[X_], d_flux[Y_], d_flux[Z_], 0., 0., 0.);
-         N_id++;
-//         cout << "id" << endl;
-     }
-     else{
-         left->addFlux(-d_flux[T_], -d_flux[X_], -d_flux[Y_], -d_flux[Z_], -d_flux[NB_],
-                       -d_flux[NQ_], -d_flux[NS_]);
-         right->addFlux(d_flux[T_], d_flux[X_], d_flux[Y_], d_flux[Z_], d_flux[NB_], d_flux[NQ_],
-                        d_flux[NS_]);
-     }
+    if ((abs(Tl[0]/6 - d_flux[0]) > el_bck/6) || (abs(Tr[0]/6 + d_flux[0]) > er_bck/6)) {
+        double max = max( abs( (Tl[0]/6 - d_flux[0])/el_bck/6 ), abs( (Tr[0]/6 + d_flux[0])/er_bck/6 ) );
+        d_flux[0] = d_flux[0] / max * 0.9;
+        N_id++;
+        //                cout << "v" << endl;
+    }
+    for (int i=1; i<4; i++) {
+        if ((abs(Tl[i] - d_flux[i]) > abs(Tl[0] - d_flux[0])/2./sqrt(3.)) || (abs(Tr[i] + d_flux[i]) > abs(Tr[0] + d_flux[0])/2./sqrt(3.))) {
+            double max = max( abs( (Tl[i] - d_flux[i])/(Tl[0] - d_flux[0]) ), abs( )(Tr[i] + d_flux[i])/(Tr[0] + d_flux[0]) ) );
+            d_flux[i] = d_flux[i] / max * 0.9;
+        }
+    }
+         left->addFlux(-d_flux[T_], -d_flux[X_], -d_flux[Y_], -d_flux[Z_], 0., 0., 0.);
+         right->addFlux(d_flux[T_], d_flux[X_], d_flux[Y_], d_flux[Z_], 0., 0., 0.);
 }
 
 
@@ -1383,15 +1385,21 @@ void Hydro::visc_flux(Cell *left, Cell *right, int direction, int ix, int iy, in
             left->getQ(Tl);
             right->getQ(Tr);
             if ((abs(Tl[0]/6 - d_flux[0]) > el_bck/6) || (abs(Tr[0]/6 + d_flux[0]) > er_bck/6)) {
-                 left->addFlux(0., -d_flux[X_], -d_flux[Y_], -d_flux[Z_], 0., 0., 0.);
-                 right->addFlux(0., d_flux[X_], d_flux[Y_], d_flux[Z_], 0., 0., 0.);
+                double max = max( abs( (Tl[0]/6 - d_flux[0])/el_bck/6 ), abs( (Tr[0]/6 + d_flux[0])/er_bck/6 ) );
+                d_flux[0] = d_flux[0] / max * 0.9;
                 N_visc++;
-//                cout << "v" << endl;
-             }
-             else{
+                //                cout << "v" << endl;
+            }
+            for (int i=1; i<4; i++) {
+                if ((abs(Tl[i] - d_flux[i]) > abs(Tl[0] - d_flux[0])/2./sqrt(3.)) || (abs(Tr[i] + d_flux[i]) > abs(Tr[0] + d_flux[0])/2./sqrt(3.))) {
+                    double max = max( abs( (Tl[i] - d_flux[i])/(Tl[0] - d_flux[0]) ), abs( )(Tr[i] + d_flux[i])/(Tr[0] + d_flux[0]) ) );
+                    d_flux[i] = d_flux[i] / max * 0.9;
+                }
+            }
+//             else{
                  left->addFlux(-d_flux[T_], -d_flux[X_], -d_flux[Y_], -d_flux[Z_], 0., 0., 0.);
                  right->addFlux(d_flux[T_], d_flux[X_], d_flux[Y_], d_flux[Z_], 0., 0., 0.);
-             }
+//             }
 }
 
 void Hydro::performStep(double ctime) {
