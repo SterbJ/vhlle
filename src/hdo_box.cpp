@@ -365,19 +365,19 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix, 
  }
 
  // update the cumulative fluxes in both neighbouring cells
-    double Tl[7];
-    double Tr[7];
-    left->getQ(Tl);
-    right->getQ(Tr);
-    if ((abs(Tl[0]/6 - d_flux[0]) > el_bck/6) || (abs(Tr[0]/6 + d_flux[0]) > er_bck/6)) {
-        double maximum = std::max( abs( (Tl[0]/6 - d_flux[0])/el_bck/6 ), abs( (Tr[0]/6 + d_flux[0])/er_bck/6 ) );
+    double d_Tl[7];
+    double d_Tr[7];
+    left->getQ(d_Tl);
+    right->getQ(d_Tr);
+    if ((abs(d_Tl[0]/6 - d_flux[0]) > el_bck/6) || (abs(d_Tr[0]/6 + d_flux[0]) > er_bck/6)) {
+        double maximum = std::max( abs( (d_Tl[0]/6 - d_flux[0])/el_bck/6 ), abs( (d_Tr[0]/6 + d_flux[0])/er_bck/6 ) );
         d_flux[0] = d_flux[0] / maximum * 0.9;
         N_id++;
         //                cout << "v" << endl;
     }
     for (int i=1; i<4; i++) {
-        if ((abs(Tl[i] - d_flux[i]) > abs(Tl[0] - d_flux[0] + el_bck)/2./sqrt(3.)) || (abs(Tr[i] + d_flux[i]) > abs(Tr[0] + d_flux[0] + er_bck)/2./sqrt(3.))) {
-            double maximum = std::max( abs( (Tl[i] - d_flux[i])/(Tl[0] - d_flux[0] + el_bck) ), abs( (Tr[i] + d_flux[i])/(Tr[0] + d_flux[0] + er_bck) ) );
+        if ((abs(d_Tl[i] - d_flux[i]) > abs(d_Tl[0] - d_flux[0] + el_bck)/2./sqrt(3.)) || (abs(d_Tr[i] + d_flux[i]) > abs(d_Tr[0] + d_flux[0] + er_bck)/2./sqrt(3.))) {
+            double maximum = std::max( abs( (d_Tl[i] - d_flux[i])/(d_Tl[0] - d_flux[0] + el_bck) ), abs( (d_Tr[i] + d_flux[i])/(d_Tr[0] + d_flux[0] + er_bck) ) );
             d_flux[i] = d_flux[i] / maximum * 0.9;
             N_id_f++;
         }
@@ -1381,19 +1381,19 @@ void Hydro::visc_flux(Cell *left, Cell *right, int direction, int ix, int iy, in
              + 0.5 * (left->getPiH_bck() + right->getPiH_bck()) * ( uuu_bck[ind1] * d_uuu[ind2] + d_uuu[ind1] * uuu_bck[ind2] );
  }
  for (int i = 0; i < 4; i++) d_flux[i] = d_flux[i] * tauMinusHalf * dt / dxa;
-            double Tl[7];
-            double Tr[7];
-            left->getQ(Tl);
-            right->getQ(Tr);
-            if ((abs(Tl[0]/6 - d_flux[0]) > el_bck/6) || (abs(Tr[0]/6 + d_flux[0]) > er_bck/6)) {
-                double maximum = std::max( abs( (Tl[0]/6 - d_flux[0])/el_bck/6 ), abs( (Tr[0]/6 + d_flux[0])/er_bck/6 ) );
+            double d_Tl[7];
+            double d_Tr[7];
+            left->getQ(d_Tl);
+            right->getQ(d_Tr);
+            if ((abs(d_Tl[0]/6 - d_flux[0]) > el_bck/6) || (abs(d_Tr[0]/6 + d_flux[0]) > er_bck/6)) {
+                double maximum = std::max( abs( (d_Tl[0]/6 - d_flux[0])/el_bck/6 ), abs( (d_Tr[0]/6 + d_flux[0])/er_bck/6 ) );
                 d_flux[0] = d_flux[0] / maximum * 0.9;
                 N_visc++;
                 //                cout << "v" << endl;
             }
             for (int i=1; i<4; i++) {
-                if ((abs(Tl[i] - d_flux[i]) > abs(Tl[0] - d_flux[0] + el_bck)/2./sqrt(3.)) || (abs(Tr[i] + d_flux[i]) > abs(Tr[0] + d_flux[0] + er_bck)/2./sqrt(3.))) {
-                    double maximum = std::max( abs( (Tl[i] - d_flux[i])/(Tl[0] - d_flux[0] + el_bck) ), abs( (Tr[i] + d_flux[i])/(Tr[0] + d_flux[0] + er_bck) ) );
+                if ((abs(d_Tl[i] - d_flux[i]) > abs(d_Tl[0] - d_flux[0] + el_bck)/2./sqrt(3.)) || (abs(d_Tr[i] + d_flux[i]) > abs(d_Tr[0] + d_flux[0] + er_bck)/2./sqrt(3.))) {
+                    double maximum = std::max( abs( (d_Tl[i] - d_flux[i])/(d_Tl[0] - d_flux[0] + el_bck) ), abs( (d_Tr[i] + d_flux[i])/(d_Tr[0] + d_flux[0] + er_bck) ) );
                     d_flux[i] = d_flux[i] / maximum * 0.9;
                     N_visc_f++;
                 }
