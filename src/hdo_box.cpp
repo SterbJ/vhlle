@@ -376,9 +376,10 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix, 
         //                cout << "v" << endl;
     }
     for (int i=1; i<4; i++) {
-        if ((abs(Tl[i] - d_flux[i]) > abs(Tl[0] - d_flux[0])/2./sqrt(3.)) || (abs(Tr[i] + d_flux[i]) > abs(Tr[0] + d_flux[0])/2./sqrt(3.))) {
-            double maximum = std::max( abs( (Tl[i] - d_flux[i])/(Tl[0] - d_flux[0]) ), abs( (Tr[i] + d_flux[i])/(Tr[0] + d_flux[0]) ) );
+        if ((abs(Tl[i] - d_flux[i]) > abs(Tl[0] - d_flux[0] + el_bck)/2./sqrt(3.)) || (abs(Tr[i] + d_flux[i]) > abs(Tr[0] + d_flux[0] + er_bck)/2./sqrt(3.))) {
+            double maximum = std::max( abs( (Tl[i] - d_flux[i])/(Tl[0] - d_flux[0] + el_bck) ), abs( (Tr[i] + d_flux[i])/(Tr[0] + d_flux[0] + er_bck) ) );
             d_flux[i] = d_flux[i] / maximum * 0.9;
+            N_id_f++;
         }
     }
          left->addFlux(-d_flux[T_], -d_flux[X_], -d_flux[Y_], -d_flux[Z_], 0., 0., 0.);
@@ -1391,9 +1392,10 @@ void Hydro::visc_flux(Cell *left, Cell *right, int direction, int ix, int iy, in
                 //                cout << "v" << endl;
             }
             for (int i=1; i<4; i++) {
-                if ((abs(Tl[i] - d_flux[i]) > abs(Tl[0] - d_flux[0])/2./sqrt(3.)) || (abs(Tr[i] + d_flux[i]) > abs(Tr[0] + d_flux[0])/2./sqrt(3.))) {
-                    double maximum = std::max( abs( (Tl[i] - d_flux[i])/(Tl[0] - d_flux[0]) ), abs( (Tr[i] + d_flux[i])/(Tr[0] + d_flux[0]) ) );
+                if ((abs(Tl[i] - d_flux[i]) > abs(Tl[0] - d_flux[0] + el_bck)/2./sqrt(3.)) || (abs(Tr[i] + d_flux[i]) > abs(Tr[0] + d_flux[0] + er_bck)/2./sqrt(3.))) {
+                    double maximum = std::max( abs( (Tl[i] - d_flux[i])/(Tl[0] - d_flux[0] + el_bck) ), abs( (Tr[i] + d_flux[i])/(Tr[0] + d_flux[0] + er_bck) ) );
                     d_flux[i] = d_flux[i] / maximum * 0.9;
+                    N_visc_f++;
                 }
             }
 //             else{
@@ -1445,18 +1447,18 @@ void Hydro::performStep(double ctime) {
 //                double etaS, zetaS;
 //                trcoeff->getEta(e__0, nb__0, T__0, etaS, zetaS);
 //                values.push_back(T00);//toto
-                variance_e = e*e/total - e*e/total/total;
+                variance_e += e*e/total - e*e/total/total;
                 values.push_back(e);//toto
             }
         }
     }
     ofstream myfile3;
-    myfile3.open ("variance_e.dat", ios::app);
+    myfile3.open ("./output/variance_e.dat", ios::app);
     myfile3 << ctime << "      " << variance_e << endl;
     myfile3.close();
     
     ofstream myfile2;
-    myfile2.open ("ENERGY_CONSERVATION_60_100.dat", ios::app);
+    myfile2.open ("./output/ENERGY_CONSERVATION_60_100.dat", ios::app);
     myfile2 << T_mean[0] << "      " << T_mean[1] << "     " << T_mean[2] << "     " << T_mean[3] << endl;
     myfile2.close();
 
@@ -1486,7 +1488,7 @@ void Hydro::performStep(double ctime) {
                 }
             }
         }
-        myfile.open ("FT_e_60_100.dat", ios::app);
+        myfile.open ("./output/FT_e_60_100.dat", ios::app);
         int i = 0;
         for (int ix=0; ix<nx; ix++) {
             for (int iy=0; iy<ny; iy++) {
@@ -1625,9 +1627,11 @@ void Hydro::performStep(double ctime) {
      f->getCell(ix, iy, iz)->updateByViscFlux();
      f->getCell(ix, iy, iz)->clearFlux();
     }
-     cout << N_id << "      " << N_visc << endl;
+     cout << N_id << "      " << N_id_f << "    " << N_visc << "    " << N_visc_f << endl;
      N_id = 0;
      N_visc = 0;
+     N_id_f = 0;
+     N_visc_f = 0;
  } else {  // end viscous part
  }
  //==== finishing work ====

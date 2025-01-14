@@ -24,6 +24,6 @@ s0ScaleFactor  107.1  !53.55
 epsilon0   30.0
 impactPar  7.0
 tau0       0.0     ! starting proper time
-tauMax     1000.0    ! proper time to stop hydro
+tauMax     100.0    ! proper time to stop hydro
 dtau       0.1    ! timestep
 
