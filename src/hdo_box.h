@@ -22,6 +22,9 @@ private:
     int N_visc=0;
     int N_id_f=0;
     int N_visc_f=0;
+    int N_limit = 0;
+    int N_el = 0;
+    int N_er = 0;
 public:
  Hydro(Fluid *_f, EoS *_eos, TransportCoeff *_trcoeff, double _t0, double _dt);
  ~Hydro();
