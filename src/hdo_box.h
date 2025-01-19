@@ -1,3 +1,4 @@
+#include <random>
 
 class Cell;
 class Fluid;
@@ -11,6 +12,9 @@ private:
  Fluid *f;
  EoS *eos;
  TransportCoeff *trcoeff;
+ std::mt19937 rnd;
+ std::normal_distribution<double> Gauss;
+
  double dt, tau;  // dt: timestep, tau: current value of the proper time
  #ifdef CARTESIAN
  double t;  // time in Cartesian frame

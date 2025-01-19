@@ -69,6 +69,7 @@ Hydro::Hydro(Fluid *_f, EoS *_eos, TransportCoeff *_trcoeff, double _t0,
  trcoeff = _trcoeff;
  f = _f;
  dt = _dt;
+ rnd.seed(2);
  #ifdef CARTESIAN
  t = _t0;
  tau = 1.0;
@@ -985,12 +986,10 @@ void Hydro::ISformal() {
         double volume = size_x * size_y * size_z;
         for (int i=0; i<4; i++) {
             for (int j=0; j<=i; j++) {
-                std::random_device rd;
-                std::mt19937 gen(rd());
                 double mean = 0.;
                 double sigma = sqrt(2 * eta_bck * T_bck * (delta[i][i] * delta[j][j] + delta[i][j] * delta[j][i])) / (sqrt(dt) * pow(volume, 1./2.)) * sqrt(0.197);
-                std::normal_distribution<double> d(mean, sigma);
-                xi[i][j] = d(gen);
+                Gauss.param(std::normal_distribution<double>::param_type(mean, sigma));
+                xi[i][j] = Gauss(rnd);
                 if (i!=j) {
                     xi[j][i] = xi[i][j];
                 }
@@ -1357,11 +1356,13 @@ void Hydro::visc_flux(Cell *left, Cell *right, int direction, int ix, int iy, in
     
  double v_bck = sqrt(vxl_bck * vxl_bck + vyl_bck * vyl_bck + vzl_bck * vzl_bck);//background norm
  double d_v = sqrt(vxl_bck * vxl_bck + vyl_bck * vyl_bck + vzl_bck * vzl_bck + 2 * vxl_bck * d_vxl + 2 * vxl_bck * d_vxl + 2 * vxl_bck * d_vxl);//linearized full norm
-// if (v > 1.) {
-//     vxl = 0.99 * vxl / v; How to define this velocity rescaling???
-//     vyl = 0.99 * vyl / v;
-//     vzl = 0.99 * vzl / v;
-// }
+    // works only for static background!!!
+    double d_v_norm = sqrt(vxl_bck * d_vxl + vxl_bck * d_vxl + vxl_bck * d_vxl);
+ if (d_v_norm > 1.) {
+     d_vxl = 0.99 * d_vxl / d_v_norm; //How to define this velocity rescaling???
+     d_vyl = 0.99 * d_vyl / d_v_norm;
+     d_vzl = 0.99 * d_vzl / d_v_norm;
+ }
     
  double gamma = 1. / sqrt(1. - v_bck * v_bck);
  double uuu_bck[4] = {gamma, gamma * vxl_bck, gamma * vyl_bck, gamma * vzl_bck}; // background
