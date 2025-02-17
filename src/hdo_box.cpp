@@ -1451,7 +1451,14 @@ void Hydro::performStep(double ctime) {
         delete[] out;//
 
         for (int ix=0; ix<nx; ix++) {
-                    double absK = sqrt(ix*ix);
+            // Compute kx
+                    int kx;
+                    if (ix <= nx / 2) {
+                        kx = ix; // Positive frequency
+                    } else {
+                        kx = ix - nx; // Negative frequency
+                    }
+                    double absK = sqrt(kx*kx);
                     myfile << ctime << "    " << xi_FT[ix] << "   " << ix << absK << endl;
         }
         myfile.close();
