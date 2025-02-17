@@ -150,16 +150,32 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix, 
 //     d_er = -er_bck;
 //     d_pr = -pr_bck;
 // }
-    if (abs(d_el) > el_bck) {//modified condition - do we allow fluctuations in empty cell?
-        d_el = d_el * el_bck/abs(d_el);
-        d_pl = d_el/3.;
-        N_el++;
-    }
-    if (abs(d_er) > er_bck) {//modified condition
-        d_er = d_er * er_bck/abs(d_er);
-        d_pr = d_er/3.;
-        N_er++;
-    }
+//    if (abs(d_el) > el_bck) {//modified condition - do we allow fluctuations in empty cell?
+//        d_el = 0. * d_el * el_bck/abs(d_el);
+//        d_pl = d_el/3.;
+//        if (mode == PREDICT) {
+//            left->setPrimVar(eos, tau, d_el, d_nbl, d_nql, d_nsl, d_vxl, d_vyl, d_vzl, el_bck, vxl_bck, vyl_bck, vzl_bck);
+//            N_el_pred++;
+//        }
+//        else{
+//            left->setPrimVarH(eos, tau, d_el, d_nbl, d_nql, d_nsl, d_vxl, d_vyl, d_vzl, el_bck, vxl_bck, vyl_bck, vzl_bck);
+//            N_el_corr++;
+//        }
+////        N_el++;
+//    }
+//    if (abs(d_er) > er_bck) {//modified condition
+//        d_er = 0. * d_er * er_bck/abs(d_er);
+//        d_pr = d_er/3.;
+//        if (mode == PREDICT) {
+//            right->setPrimVar(eos, tau, d_er, d_nbr, d_nqr, d_nsr, d_vxr, d_vyr, d_vzr, er_bck, vxr_bck, vyr_bck, vzr_bck);
+//            N_er_pred++;
+//        }
+//        else{
+//            right->setPrimVarH(eos, tau, d_er, d_nbr, d_nqr, d_nsr, d_vxr, d_vyr, d_vzr, er_bck, vxr_bck, vyr_bck, vzr_bck);
+//            N_er_corr++;
+//        }
+////        N_er++;
+//    }
 
  if (d_el+el_bck > 1e10 || el_bck > 1e10) {//modified condition
   cout << "e>1e10; debug info below:\n";
@@ -182,7 +198,7 @@ void Hydro::hlle_flux(Cell *left, Cell *right, int direction, int mode, int ix, 
  }
 
  // skip the procedure for two empty cells
- //if ((d_el+el_bck < 0. && d_er+er_bck < 0.) || (el_bck == 0. && er_bck == 0.)) return;//modified condition - thershold!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ if ((d_el+el_bck < 0. && d_er+er_bck < 0.) || (el_bck == 0. && er_bck == 0.)) return;//modified condition - thershold!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  if (d_pr + pr_bck < 0. || pr_bck < 0.) {//modified condition
 //     return;
   cout << "Negative pressure    " << d_pr << "      " << d_er << "  " << ix << "    " << iy << "    " << iz << endl;
@@ -865,340 +881,376 @@ void Hydro::ISformal() {
                       {0, 0, -1, 0},// tau factor not needed in Cartesian coordinates
                       {0, 0, 0, -1}};
  // loop #1 (relaxation+source terms)
-    double pr[4][4];
-    for (int i=0; i<4; i++) {
-        for (int j=0; j<4; j++) {
-            pr[i][j] = 0.;
-        }
-    }
- for (int ix = 0; ix < f->getNX(); ix++)
-  for (int iy = 0; iy < f->getNY(); iy++)
-   for (int iz = 0; iz < f->getNZ(); iz++) {
-    Cell *c = f->getCell(ix, iy, iz);
-    c->getPrimVarHCenterQbck(eos, tauMinusHalf, e_bck, p_bck, nb_bck, nq_bck, ns_bck, vx_bck, vy_bck, vz_bck);
-    c->getPrimVarHCenter(eos, tauMinusHalf, d_e, d_p, d_nb, d_nq, d_ns, d_vx, d_vy,
-                         d_vz, e_bck, p_bck, nb_bck, nq_bck, ns_bck, vx_bck, vy_bck, vz_bck);  // instead of getPrimVar()
-       
-    if (d_e+e_bck < 0. || e_bck <= 0.) {// modified condition             // empty cell?
-     for (int i = 0; i < 4; i++)
-      for (int j = 0; j <= i; j++) {
-       c->setpiH0(i, j, 0.0);
-       c->setpi0(i, j, 0.0);
-      }
-     c->setPiH0(0.0);
-     c->setPi0(0.0);
-    } else {  // non-empty cell
-     // 1) relaxation(pi)+source(pi) terms for half-step
-        double gamma = 1.0 / sqrt(1.0 - vx_bck * vx_bck - vy_bck * vy_bck - vz_bck * vz_bck);
-        double u_bck[4];//background velocity
-        u_bck[0] = gamma;
-        u_bck[1] = u_bck[0] * vx_bck;
-        u_bck[2] = u_bck[0] * vy_bck;
-        u_bck[3] = u_bck[0] * vz_bck;
-        
-        double d_u[4];//fluctuation of velocity
-        d_u[0] = 0.;
-        d_u[1] = gamma * d_vx;
-        d_u[2] = gamma * d_vy;
-        d_u[3] = gamma * d_vz;
-            
-        // source term  + tau*delta_Q_i/delta_tau
-        double d_flux[4];
-        for (int i = 0; i < 4; i++){
-            d_flux[i] = tauMinusDt * (c->getpi(0, i) + c->getPi() * ( d_u[0] * u_bck[i] + u_bck[0] * d_u[i] ) );
-        }
-        d_flux[0] += -tauMinusDt * c->getPi();
-        c->addFlux(d_flux[0], d_flux[1], d_flux[2], d_flux[3], 0., 0., 0.);
-        // now calculating viscous terms in NS limit
-        NSquant(ix, iy, iz, d_piNS, d_PiNS, d_dmu, dmu_bck, d_du, du_bck);
-        PiNS_bck = 0.; // setting the background NS variables 0 here - need to get it from the full hydro code when run together
-        for (int i = 0; i < 4; i++)
-            for (int j = 0; j <= i; j++) {
-                piNS_bck[i][j]=0.;
-            }
-// derivative of background pi^munu
-#ifdef CARTESIAN
-    double tauPlusHalf_0 = 1.0;
-#else
-    double tauPlusHalf_0 = tau + 0.5 * dt;
-#endif
-    for(int i = 0; i < 4; i++){
-        for(int j = 0; j < 4; j++){
-            dpi_bck[i][j][0] = (f->getCell(ix, iy, iz)->getpi_bck(i,j) - f->getCell(ix, iy, iz)->getpi_bck_prev(i,j)) / dt;
-            dpi_bck[i][j][1] = 0.5 * (f->getCell(ix + 1, iy, iz)->getpi_bck(i,j) - f->getCell(ix - 1, iy, iz)->getpi_bck(i,j)) / dx;
-            dpi_bck[i][j][2] = 0.5 * (f->getCell(ix, iy + 1, iz)->getpi_bck(i,j) - f->getCell(ix, iy - 1, iz)->getpi_bck(i,j)) / dy;
-            dpi_bck[i][j][3] = 0.5 * (f->getCell(ix, iy, iz + 1)->getpi_bck(i,j) - f->getCell(ix, iy, iz - 1)->getpi_bck(i,j)) / dz / tauPlusHalf_0;
-        }
-    }
-        
-     double T1; // just for the derivative
-     double h = 0.01; // shift for derivative
-     eos->eos(e_bck, nb_bck, nq_bck, ns_bck, T_bck, mub, muq, mus, p_bck);
-     eos->eos(e_bck* (1 + h), nb_bck, nq_bck, ns_bck, T1, mub, muq, mus, p_bck);
-     double dT = (T1 - T_bck) / (e_bck *h) ; // derivative of temperature wrt energy density
-     double etaS, zetaS; // constant ratio
-     trcoeff->getEta(e_bck, nb_bck, T_bck, etaS, zetaS); // obtains eta and zeta
-     const double s_bck = eos->s(e_bck, nb_bck, nq_bck, ns_bck); // background enthropy
-     double dS = (eos->s(e_bck * (1 + h), nb_bck, nq_bck, ns_bck) - s_bck ) / (e_bck *h); // derivative of enthropy wtr to energy density
-     double d_s = dS * d_e; // fluctuation of enthropy
-     const double eta_bck = etaS * s_bck; // eta0 - background viscosity
-//        cout << eta_bck << endl;
-     const double d_eta = etaS * d_s; // fluctuation in viscosity
-     double eta = eta_bck + d_eta; // whole shear viscosity
-     // auxiliary variable sigmaNS = piNS / (2*eta),
-     // mainly to protect against division by zero in the eta=0 case.
-     for(int i=0; i<4; i++)
-     for(int j=0; j<4; j++) {
-      sigNS_bck[i][j] = 0.; // background sigma NS set to zero - need to get from the full code
-      d_sigNS[i][j] = 0.5 * (d_piNS[i][j] * 5.068 - 2. * d_eta * sigNS_bck[i][j] ) / eta_bck ;
-         if(eta<=0.0){
-             d_sigNS[i][j] = 0.0;
-             sigNS_bck[i][j] = 0.;
-         }
-     }
-     //############# get relaxation times
-     double taupi_bck, tauPi_bck; // the background values of relaxation times
-     double d_taupi, d_tauPi; // fluctuations in relaxation times
-     trcoeff->getTau(e_bck, d_e, d_nb, T_bck, dT, taupi_bck, d_taupi, tauPi_bck, d_tauPi);
-     double deltapipi, taupipi, lambdapiPi, phi7, phi7_bck, d_phi7, delPiPi, lamPipi; // coefficients for source terms in relaxation equations
-     trcoeff->getOther(e_bck, d_nb, d_nq, d_ns, deltapipi, taupipi, lambdapiPi, phi7);
-     phi7_bck = phi7/taupi_bck;  // dividing by tau_pi here, to avoid NaNs when tau_pi==0
-     d_phi7 = phi7 / (taupi_bck * taupi_bck) * d_taupi; // fluctuation in phi7 coeff - it is the only one which does not include taupi
-     if(taupi_bck < 0.5 * dt) // modified condition - what about this condition?
-      deltapipi = taupipi = lambdapiPi = phi7 = 0.0;
-     trcoeff->getOtherBulk(e_bck, d_nb, d_nq, d_ns, delPiPi, lamPipi);
-     if(tauPi_bck < 0.5 * dt)// modified condition
-      delPiPi = lamPipi = 0.0;
-     //#############
-        //noise
-        double xi[4][4];
-        double delta[4][4];
-        double Trxi = 0.;
-        for (int i=0; i<4; i++) {
-            for (int j=0; j<4; j++) {
-                delta[i][j] = gmunu[i][j] - u_bck[i]*u_bck[j];
-                xi[i][j] = 0.;
-            }
-        }
-        double size_x = f->getDx();
-        double size_y = f->getDy();
-        double size_z = f->getDz();
-        double volume = size_x * size_y * size_z;
-        for (int i=0; i<4; i++) {
-            for (int j=0; j<=i; j++) {
-                double mean = 0.;
-                double sigma = sqrt(2 * eta_bck * T_bck * (delta[i][i] * delta[j][j] + delta[i][j] * delta[j][i])) / (sqrt(dt) * pow(volume, 1./2.)) * sqrt(0.197);
-                Gauss.param(std::normal_distribution<double>::param_type(mean, sigma));
-                xi[i][j] = Gauss(rnd);
-                if (i!=j) {
-                    xi[j][i] = xi[i][j];
-                }
-//                cout << xi[i][j] << "   " << i << "     " << j << endl;
-                if (i==j) {
-                    Trxi += xi[i][j];
-                }
-            }
-        }
-        for (int i=0; i<4; i++) {
-            for (int j=0; j<4; j++) {
-                if (i==j && i!=0) {
-                    xi[i][j] -= 1./3. * Trxi;
-                }
-            }
-        }
+    double etaS__, zetaS__; // constant ratio                                   this remove in 3D
+    trcoeff->getEta(1., 0., 0.156, etaS__, zetaS__); // obtains eta and zeta    this remove in 3D
+    double s_bck__ = eos->s(1., 0., 0., 0.); // background enthropy             this remove in 3D
+    double eta_bck__ = etaS__ * s_bck__; // eta0 - background viscosity         this remove in 3D
+    for (int ix = 0; ix < f->getNX(); ix++){
+        //########################################### - for 1D
+        double xi[4][4];                                                        //this remove in 3D
+        double delta_[4][4] = {{0, 0, 0, 0},                                    //
+                              {0, -1, 0, 0},                                    //
+                              {0, 0, -1, 0},                                    //
+                              {0, 0, 0, -1}};                                   //
+        double Trxi = 0.;                                                       //
+        for (int i=0; i<4; i++) {                                               //
+            for (int j=0; j<4; j++) {                                           //
+                xi[i][j] = 0.;                                                  //
+            }                                                                   //
+        }                                                                       //
+        double size_x = f->getDx();                                             //
+        double volume = size_x;                                                 //
+        for (int i=0; i<4; i++) {                                               //
+            for (int j=0; j<=i; j++) {                                          //
+                double mean = 0.;                                               //
+                double sigma = sqrt(2 * eta_bck__ * 0.156 * (delta_[i][i] * delta_[j][j] + delta_[i][j] * delta_[j][i])) / (sqrt(dt) * pow(volume, 1./2.)) * sqrt(0.197);                                      //
+                Gauss.param(std::normal_distribution<double>::param_type(mean, sigma));         //
+                xi[i][j] = Gauss(rnd);                                          //
+                if (i!=j) {                                                     //
+                    xi[j][i] = xi[i][j];                                        //
+                }                                                               //
+                if (i==j) {                                                     //
+                    Trxi += xi[i][j];                                           //
+                }                                                               //
+            }                                                                   //
+        }                                                                       //
+        for (int i=0; i<4; i++) {                                               //
+            for (int j=0; j<4; j++) {                                           //
+                if (i==j && i!=0) {                                             //
+                    xi[i][j] -= 1./3. * Trxi;                                   //
+                }                                                               //
+            }                                                                   //
+        }                                                                       //
         //######################
-     double Delta[10]; // corresponds to background Delta
-     // relaxation term, piH,PiH-->half-step
-     for (int i = 0; i < 4; i++)
-      for (int j = 0; j <= i; j++) {
-              Delta[index44(i, j)] = - u_bck[i] * u_bck[j];
-       if (i == j) Delta[index44(i, j)] += gmumu[i];
-          
-#ifdef FORMAL_SOLUTION
-       c->setpiH0(i, j, (c->getpi(i, j) - d_piNS[i][j]) *
-                                exp(-dt / 2.0 / gamma / taupi_bck) +
-                            d_piNS[i][j]);
-       c->addpiH0(i, j, (c->getpi_bck(i, j) - piNS_bck[i][j]) * dt / 2.0  / gamma / (taupi_bck*taupi_bck) * d_taupi ); // this should be the same even for formal solution, I think
+        for (int iy = 0; iy < f->getNY(); iy++){
+            for (int iz = 0; iz < f->getNZ(); iz++) {
+                Cell *c = f->getCell(ix, iy, iz);
+                c->getPrimVarHCenterQbck(eos, tauMinusHalf, e_bck, p_bck, nb_bck, nq_bck, ns_bck, vx_bck, vy_bck, vz_bck);
+                c->getPrimVarHCenter(eos, tauMinusHalf, d_e, d_p, d_nb, d_nq, d_ns, d_vx, d_vy,
+                                     d_vz, e_bck, p_bck, nb_bck, nq_bck, ns_bck, vx_bck, vy_bck, vz_bck);  // instead of getPrimVar()
+                
+                if (d_e+e_bck < 0. || e_bck <= 0.) {// modified condition             // empty cell?
+                    for (int i = 0; i < 4; i++)
+                        for (int j = 0; j <= i; j++) {
+                            c->setpiH0(i, j, 0.0);
+                            c->setpi0(i, j, 0.0);
+                        }
+                    c->setPiH0(0.0);
+                    c->setPi0(0.0);
+                } else {  // non-empty cell
+                    // 1) relaxation(pi)+source(pi) terms for half-step
+                    double gamma = 1.0 / sqrt(1.0 - vx_bck * vx_bck - vy_bck * vy_bck - vz_bck * vz_bck);
+                    double u_bck[4];//background velocity
+                    u_bck[0] = gamma;
+                    u_bck[1] = u_bck[0] * vx_bck;
+                    u_bck[2] = u_bck[0] * vy_bck;
+                    u_bck[3] = u_bck[0] * vz_bck;
+                    
+                    double d_u[4];//fluctuation of velocity
+                    d_u[0] = 0.;
+                    d_u[1] = gamma * d_vx;
+                    d_u[2] = gamma * d_vy;
+                    d_u[3] = gamma * d_vz;
+                    
+                    // source term  + tau*delta_Q_i/delta_tau
+                    double d_flux[4];
+                    for (int i = 0; i < 4; i++){
+                        d_flux[i] = tauMinusDt * (c->getpi(0, i) + c->getPi() * ( d_u[0] * u_bck[i] + u_bck[0] * d_u[i] ) );
+                    }
+                    d_flux[0] += -tauMinusDt * c->getPi();
+                    c->addFlux(d_flux[0], d_flux[1], d_flux[2], d_flux[3], 0., 0., 0.);
+                    // now calculating viscous terms in NS limit
+                    NSquant(ix, iy, iz, d_piNS, d_PiNS, d_dmu, dmu_bck, d_du, du_bck);
+                    PiNS_bck = 0.; // setting the background NS variables 0 here - need to get it from the full hydro code when run together
+                    for (int i = 0; i < 4; i++)
+                        for (int j = 0; j <= i; j++) {
+                            piNS_bck[i][j]=0.;
+                        }
+                    // derivative of background pi^munu
+#ifdef CARTESIAN
+                    double tauPlusHalf_0 = 1.0;
 #else
-          if(taupi_bck > 0.5 * dt){// modified condition - what the condition should be?
-              c->setpiH0(i, j, c->getpi(i, j) -
-                         (c->getpi(i, j) - d_piNS[i][j] - xi[i][j]) * dt / 2.0 / gamma / taupi_bck);
-              c->addpiH0(i, j, (c->getpi_bck(i, j) - piNS_bck[i][j]) * dt / 2.0 / gamma / (taupi_bck * taupi_bck) * d_taupi); // source term from delta tau_pi
-//              c->addpiH0(i, j, xi[i][j] * dt / 2.0 / gamma / taupi_bck);//adding the noise term
-          }
-          else
-              c->setpiH0(i, j, d_piNS[i][j] + xi[i][j]);//adding the noise term
+                    double tauPlusHalf_0 = tau + 0.5 * dt;
 #endif
-      }
+                    for(int i = 0; i < 4; i++){
+                        for(int j = 0; j < 4; j++){
+                            dpi_bck[i][j][0] = (f->getCell(ix, iy, iz)->getpi_bck(i,j) - f->getCell(ix, iy, iz)->getpi_bck_prev(i,j)) / dt;
+                            dpi_bck[i][j][1] = 0.5 * (f->getCell(ix + 1, iy, iz)->getpi_bck(i,j) - f->getCell(ix - 1, iy, iz)->getpi_bck(i,j)) / dx;
+                            dpi_bck[i][j][2] = 0.5 * (f->getCell(ix, iy + 1, iz)->getpi_bck(i,j) - f->getCell(ix, iy - 1, iz)->getpi_bck(i,j)) / dy;
+                            dpi_bck[i][j][3] = 0.5 * (f->getCell(ix, iy, iz + 1)->getpi_bck(i,j) - f->getCell(ix, iy, iz - 1)->getpi_bck(i,j)) / dz / tauPlusHalf_0;
+                        }
+                    }
+                    
+                    double T1; // just for the derivative
+                    double h = 0.01; // shift for derivative
+                    eos->eos(e_bck, nb_bck, nq_bck, ns_bck, T_bck, mub, muq, mus, p_bck);
+                    eos->eos(e_bck* (1 + h), nb_bck, nq_bck, ns_bck, T1, mub, muq, mus, p_bck);
+                    double dT = (T1 - T_bck) / (e_bck *h) ; // derivative of temperature wrt energy density
+                    double etaS, zetaS; // constant ratio
+                    trcoeff->getEta(e_bck, nb_bck, T_bck, etaS, zetaS); // obtains eta and zeta
+                    const double s_bck = eos->s(e_bck, nb_bck, nq_bck, ns_bck); // background enthropy
+                    double dS = (eos->s(e_bck * (1 + h), nb_bck, nq_bck, ns_bck) - s_bck ) / (e_bck *h); // derivative of enthropy wtr to energy density
+                    double d_s = dS * d_e; // fluctuation of enthropy
+                    const double eta_bck = etaS * s_bck; // eta0 - background viscosity
+                    //        cout << eta_bck << endl;
+                    const double d_eta = etaS * d_s; // fluctuation in viscosity
+                    double eta = eta_bck + d_eta; // whole shear viscosity
+                    // auxiliary variable sigmaNS = piNS / (2*eta),
+                    // mainly to protect against division by zero in the eta=0 case.
+                    for(int i=0; i<4; i++)
+                        for(int j=0; j<4; j++) {
+                            sigNS_bck[i][j] = 0.; // background sigma NS set to zero - need to get from the full code
+                            d_sigNS[i][j] = 0.5 * (d_piNS[i][j] * 5.068 - 2. * d_eta * sigNS_bck[i][j] ) / eta_bck ;
+                            if(eta<=0.0){
+                                d_sigNS[i][j] = 0.0;
+                                sigNS_bck[i][j] = 0.;
+                            }
+                        }
+                    //############# get relaxation times
+                    double taupi_bck, tauPi_bck; // the background values of relaxation times
+                    double d_taupi, d_tauPi; // fluctuations in relaxation times
+                    trcoeff->getTau(e_bck, d_e, d_nb, T_bck, dT, taupi_bck, d_taupi, tauPi_bck, d_tauPi);
+                    double deltapipi, taupipi, lambdapiPi, phi7, phi7_bck, d_phi7, delPiPi, lamPipi; // coefficients for source terms in relaxation equations
+                    trcoeff->getOther(e_bck, d_nb, d_nq, d_ns, deltapipi, taupipi, lambdapiPi, phi7);
+                    phi7_bck = phi7/taupi_bck;  // dividing by tau_pi here, to avoid NaNs when tau_pi==0
+                    d_phi7 = phi7 / (taupi_bck * taupi_bck) * d_taupi; // fluctuation in phi7 coeff - it is the only one which does not include taupi
+                    if(taupi_bck < 0.5 * dt) // modified condition - what about this condition?
+                        deltapipi = taupipi = lambdapiPi = phi7 = 0.0;
+                    trcoeff->getOtherBulk(e_bck, d_nb, d_nq, d_ns, delPiPi, lamPipi);
+                    if(tauPi_bck < 0.5 * dt)// modified condition
+                        delPiPi = lamPipi = 0.0;
+//                    //############# - in 3D
+//                    //noise
+//                    double xi[4][4];
+//                    double delta[4][4];
+//                    double Trxi = 0.;
+//                    for (int i=0; i<4; i++) {
+//                        for (int j=0; j<4; j++) {
+//                            delta[i][j] = gmunu[i][j] - u_bck[i]*u_bck[j];
+//                            xi[i][j] = 0.;
+//                        }
+//                    }
+//                    double size_x = f->getDx();
+//                    double size_y = f->getDy();
+//                    double size_z = f->getDz();
+//                    double volume = size_x * size_y * size_z;
+//                    for (int i=0; i<4; i++) {
+//                        for (int j=0; j<=i; j++) {
+//                            double mean = 0.;
+//                            double sigma = sqrt(2 * eta_bck * T_bck * (delta[i][i] * delta[j][j] + delta[i][j] * delta[j][i])) / (sqrt(dt) * pow(volume, 1./2.)) * sqrt(0.197);
+//                            Gauss.param(std::normal_distribution<double>::param_type(mean, sigma));
+//                            xi[i][j] = Gauss(rnd);
+//                            if (i!=j) {
+//                                xi[j][i] = xi[i][j];
+//                            }
+//                            //                cout << xi[i][j] << "   " << i << "     " << j << endl;
+//                            if (i==j) {
+//                                Trxi += xi[i][j];
+//                            }
+//                        }
+//                    }
+//                    for (int i=0; i<4; i++) {
+//                        for (int j=0; j<4; j++) {
+//                            if (i==j && i!=0) {
+//                                xi[i][j] -= 1./3. * Trxi;
+//                            }
+//                        }
+//                    }
+//                    //######################
+                    double Delta[10]; // corresponds to background Delta
+                    // relaxation term, piH,PiH-->half-step
+                    for (int i = 0; i < 4; i++)
+                        for (int j = 0; j <= i; j++) {
+                            Delta[index44(i, j)] = - u_bck[i] * u_bck[j];
+                            if (i == j) Delta[index44(i, j)] += gmumu[i];
+                            
 #ifdef FORMAL_SOLUTION
-     c->setPiH0((c->getPi() - d_PiNS) * exp(-dt / 2.0 / gamma / tauPi_bck) + d_PiNS);
-     c->setPiH0( (c->getPi_bck() - PiNS_bck) * dt / 2.0 / gamma / (tauPi_bck * tauPi_bck) * d_tauPi );
+                            c->setpiH0(i, j, (c->getpi(i, j) - d_piNS[i][j]) *
+                                       exp(-dt / 2.0 / gamma / taupi_bck) +
+                                       d_piNS[i][j]);
+                            c->addpiH0(i, j, (c->getpi_bck(i, j) - piNS_bck[i][j]) * dt / 2.0  / gamma / (taupi_bck*taupi_bck) * d_taupi ); // this should be the same even for formal solution, I think
 #else
-        if(tauPi_bck > 0.5 * dt){// modified condition
-            c->setPiH0(c->getPi() - (c->getPi() - d_PiNS) * dt / 2.0 / gamma / tauPi_bck);
-            c->setPiH0( (c->getPi_bck() - PiNS_bck) * dt / 2.0 / gamma / (tauPi_bck * tauPi_bck) * d_tauPi );
+                            if(taupi_bck > 0.5 * dt){// modified condition - what the condition should be?
+                                c->setpiH0(i, j, c->getpi(i, j) -
+                                           (c->getpi(i, j) - d_piNS[i][j] - xi[i][j]) * dt / 2.0 / gamma / taupi_bck);
+                                c->addpiH0(i, j, (c->getpi_bck(i, j) - piNS_bck[i][j]) * dt / 2.0 / gamma / (taupi_bck * taupi_bck) * d_taupi); // source term from delta tau_pi
+                                //              c->addpiH0(i, j, xi[i][j] * dt / 2.0 / gamma / taupi_bck);//adding the noise term
+                            }
+                            else
+                                c->setpiH0(i, j, d_piNS[i][j] + xi[i][j]);//adding the noise term
+#endif
+                        }
+#ifdef FORMAL_SOLUTION
+                    c->setPiH0((c->getPi() - d_PiNS) * exp(-dt / 2.0 / gamma / tauPi_bck) + d_PiNS);
+                    c->setPiH0( (c->getPi_bck() - PiNS_bck) * dt / 2.0 / gamma / (tauPi_bck * tauPi_bck) * d_tauPi );
+#else
+                    if(tauPi_bck > 0.5 * dt){// modified condition
+                        c->setPiH0(c->getPi() - (c->getPi() - d_PiNS) * dt / 2.0 / gamma / tauPi_bck);
+                        c->setPiH0( (c->getPi_bck() - PiNS_bck) * dt / 2.0 / gamma / (tauPi_bck * tauPi_bck) * d_tauPi );
+                    }
+                    else
+                        c->setPiH0(d_PiNS);
+#endif
+                    // sources from Christoffel symbols from \dot pi_munu - only in tau-eta coordinate frame
+#ifndef CARTESIAN
+                    double tau1 = tau - dt * 0.75;
+                    c->addpiH0(0, 0,
+                               -2. * vz * c->getpi(0, 3) / tau1 * dt / 2.);  // *gamma/gamma
+                    c->addpiH0(3, 3, -(2. * vz / tau1 * c->getpi(0, 3)) * dt / 2.);
+                    c->addpiH0(
+                               3, 0,
+                               -(vz / tau1 * c->getpi(0, 0) + vz / tau1 * c->getpi(3, 3)) * dt / 2.);
+                    c->addpiH0(1, 0, -vz / tau1 * c->getpi(1, 3) * dt / 2.);
+                    c->addpiH0(2, 0, -vz / tau1 * c->getpi(2, 3) * dt / 2.);
+                    c->addpiH0(3, 1, -(vz / tau1 * c->getpi(0, 1)) * dt / 2.);
+                    c->addpiH0(3, 2, -(vz / tau1 * c->getpi(0, 2)) * dt / 2.);
+#endif
+                    // source from full IS equations (see  draft for the description)
+                    for (int i = 0; i < 4; i++)
+                        for (int j = 0; j <= i; j++) {
+                            //        now transversality and cross terms
+                            //          c->addpiH0(i, j, -xi[i][j]);
+                            c->addpiH0(i, j, (- deltapipi * ( c->getpi(i, j) * du_bck + c->getpi_bck(i,j) * d_du ) ) / gamma * 0.5 * dt ); // the 4/3 source term
+                            c->addpiH0(i, j, lambdapiPi * ( c->getPi() * sigNS_bck[i][j] + c->getPi_bck() * d_sigNS[i][j] ) / gamma * 0.5 * dt); // lambdapiPi
+                            for (int k = 0; k < 4; k++) {
+                                //         parts of terms with one internal summation index
+                                c->addpiH0(i, j, phi7_bck * ( c->getpi_bck(i, k) * c->getpi(j, k) + c->getpi(i, k) * c->getpi_bck(j, k) ) * gmumu[k] / gamma * 0.5 * dt ); // first part of phi7
+                                c->addpiH0(i, j, taupipi * 0.5 * ( c->getpi_bck(i, k) * d_sigNS[j][k] + c->getpi(i, k) * sigNS_bck[j][k] + c->getpi_bck(j, k) * d_sigNS[i][k] + c->getpi(j, k) * sigNS_bck[i][k] ) * gmumu[k] / gamma * 0.5 * dt ); // first part of taupipi
+                                c->addpiH0(i,j, - d_u[k] * dpi_bck[i][j][k] / gamma * 0.5 * dt );
+                                c->addpiH0(i, j, d_phi7 * c->getpi_bck(i,k) * c->getpi_bck(j,k) * gmumu[k] / gamma * 0.5 * dt); // delta phi7 part
+                                //         parts of terms with two internal summation indexes
+                                for (int l = 0; l < 4; l++){
+                                    c->addpiH0(i, j, - (c->getpi(i, k) * u_bck[j] + c->getpi(j, k) * u_bck[i]) * u_bck[l] * dmu_bck[l][k] * gmumu[k] / gamma * 0.5 * dt
+                                               - (c->getpi_bck(i, k) * u_bck[j] + c->getpi_bck(j, k) * u_bck[i]) * u_bck[l] * d_dmu[l][k] * gmumu[k] / gamma * 0.5 * dt
+                                               - d_u[k] * (u_bck[j] * u_bck[l] * dpi_bck[k][i][l] + u_bck[i] * u_bck[l] * dpi_bck[k][j][l]) * gmumu[k] / gamma * 0.5 * dt
+                                               - (u_bck[j] * c->getpi_bck(i, k) + u_bck[i] * c->getpi_bck(j, k)) * d_u[l] * dmu_bck[l][k] * gmumu[k] / gamma * 0.5 * dt );
+                                    c->addpiH0(i, j, phi7_bck * ( ( c->getpi_bck(i, l) * u_bck[j] + c->getpi_bck(j, l) * u_bck[i] ) * u_bck[k] * c->getpi(k, l)
+                                                                 - 2./3. * Delta[index44(i,j)] * (c->getpi_bck(k, l) * c->getpi(k, l) ) ) * gmumu[k] * gmumu[l] / gamma * 0.5 * dt ); // second part of phi7
+                                    c->addpiH0(i, j, phi7_bck * ( - ( u_bck[j] * c->getpi_bck(i, l) + u_bck[i] * c->getpi_bck(j, l) ) * d_u[k] * c->getpi_bck(k, l)
+                                                                 + 1./3 * ( d_u[i] * u_bck[j] + u_bck[i] * d_u[j] ) * c->getpi_bck(k, l) * c->getpi_bck(k, l) ) * gmumu[k] * gmumu[l] / gamma * 0.5 * dt ); // delta part of brackets for phi7
+                                    
+                                    c->addpiH0(i, j, taupipi * ( 0.5 * ( c->getpi_bck(i, l) * u_bck[j] + c->getpi_bck(j, l) * u_bck[i] ) * u_bck[k] * d_sigNS[k][l]
+                                                                + 0.5 * ( sigNS_bck[j][l] * u_bck[i] + sigNS_bck[i][l] * u_bck[j] ) * u_bck[k] * c->getpi(k, l)
+                                                                - 1./3. * Delta[index44(i,j)] * (c->getpi_bck(k, l) * d_sigNS[k][l] + c->getpi(k, l) * sigNS_bck[k][l] ) ) * gmumu[k] * gmumu[l] / gamma * 0.5 * dt ); // second part of taupipi
+                                    c->addpiH0(i, j, taupipi * ( - 0.5 * ( u_bck[j] * c->getpi_bck(i, l) + u_bck[i] * c->getpi_bck(j, l) ) * d_u[k] * sigNS_bck[k][l]
+                                                                - 0.5 * ( u_bck[i] * sigNS_bck[j][l] + u_bck[j] * sigNS_bck[i][l] ) * d_u[k] * c->getpi_bck(k, l)
+                                                                + 1./3 * ( d_u[i] * u_bck[j] + u_bck[i] * d_u[j] ) * c->getpi_bck(k, l) * sigNS_bck[k][l] ) * gmumu[k] * gmumu[l] / gamma * 0.5 * dt ); // delta part of brackets for taupipi
+                                    
+                                    c->addPiH0(lamPipi * (c->getpi(k, l) * sigNS_bck[k][l] + c->getpi_bck(k, l) * d_sigNS[k][l] ) / gamma * 0.5 * dt);
+                                    for (int r = 0; r < 4; r++) {//3 summation indeces
+                                        c->addpiH0(i, j, 2./3 * (gmunu[i][j] + 2 * u_bck[i] * u_bck[j]) * u_bck[k] * c->getpi(k, r) * u_bck[l] * dmu_bck[l][r] * gmumu[k] * gmumu[r] / gamma * 0.5 * dt );
+                                        c->addpiH0(i, j, ( 1./2 * ( ( d_u[j] * u_bck[r] + u_bck[j] * d_u[r] ) * ( gmunu[i][k] + u_bck[i] * u_bck[k] ) + ( d_u[i] * u_bck[k] + u_bck[i] * d_u[k] ) * ( gmunu[j][r] + u_bck[j] * u_bck[r] ) )
+                                                          + 1./2 * ( ( d_u[i] * u_bck[r] + u_bck[i] * d_u[r] ) * ( gmunu[j][k] + u_bck[j] * u_bck[k] ) + ( d_u[j] * u_bck[k] + u_bck[j] * d_u[k] ) * ( gmunu[i][r] + u_bck[i] * u_bck[r] ) )
+                                                          - 1./3 * ( ( d_u[k] * u_bck[r] + u_bck[k] * d_u[r] ) * ( gmunu[i][j] + u_bck[i] * u_bck[j] ) + ( d_u[i] * u_bck[j] + u_bck[i] * d_u[j] ) * ( gmunu[k][r] + u_bck[k] * u_bck[r] ) )
+                                                          ) * u_bck[l] * dpi_bck[k][r][l] * gmumu[k] * gmumu[r] / gamma * 0.5 * dt );
+                                    }
+                                }
+                            }
+                        }
+                    c->addPiH0(-delPiPi * ( c->getPi() * du_bck + c->getPi_bck() * d_du ) / gamma * 0.5 * dt);
+                    
+                    for(int i = 0; i < 4; i++){//calculation of derivative of background pi^munu at the halfstep
+                        for(int j = 0; j < 4; j++){
+                            dpiH_bck[i][j][0] = (f->getCell(ix, iy, iz)->getpiH0_bck(i,j) - f->getCell(ix, iy, iz)->getpiH0_bck_prev(i,j)) / dt;
+                            dpiH_bck[i][j][1] = 0.5 * (f->getCell(ix + 1, iy, iz)->getpiH0_bck(i,j) - f->getCell(ix - 1, iy, iz)->getpiH0_bck(i,j)) / dx;
+                            dpiH_bck[i][j][2] = 0.5 * (f->getCell(ix, iy + 1, iz)->getpiH0_bck(i,j) - f->getCell(ix, iy - 1, iz)->getpiH0_bck(i,j)) / dy;
+                            dpiH_bck[i][j][3] = 0.5 * (f->getCell(ix, iy, iz + 1)->getpiH0_bck(i,j) - f->getCell(ix, iy, iz - 1)->getpiH0_bck(i,j)) / dz / tauPlusHalf_0;
+                        }
+                    }
+                    
+                    // 1) relaxation(piH)+source(piH) terms for full-step
+                    for (int i = 0; i < 4; i++)
+                        for (int j = 0; j <= i; j++) {
+#ifdef FORMAL_SOLUTION
+                            c->setpi0(i, j,
+                                      (c->getpi(i, j) - d_piNS[i][j]) * exp(-dt / gamma / taupi_bck) +
+                                      d_piNS[i][j]);
+                            c->addpi0(i, j, (c->getpiH0_bck(i, j) - piNS_bck[i][j]) * dt / gamma / (taupi_bck*taupi_bck) * d_taupi );//H0 or not?
+                            
+#else
+                            if(taupi_bck > 0.5 * dt){// modified condition
+                                c->setpi0(i, j, c->getpi(i, j) -
+                                          (c->getpiH0(i, j) - d_piNS[i][j] - xi[i][j]) * dt / gamma / taupi_bck);
+                                c->addpi0(i, j, (c->getpiH0_bck(i, j) - piNS_bck[i][j]) * dt / gamma / (taupi_bck*taupi_bck) * d_taupi );
+                                //              c->addpi0(i, j, xi[i][j] * dt / gamma / taupi_bck);//adding the noise term
+                            }
+                            else
+                                c->setpi0(i, j, d_piNS[i][j] + xi[i][j]);//adding the noise term
+#endif
+                        }
+                    
+#ifdef FORMAL_SOLUTION
+                    c->setPi0((c->getPi() - d_PiNS) * exp(-dt / gamma / tauPi_bck) + d_PiNS);
+                    c->setPi0( (c->getPiH0_bck() - PiNS_bck) * dt / gamma / (tauPi_bck * tauPi_bck) * d_tauPi );
+#else
+                    if(tauPi_bck > 0.5 * dt){// modified condition
+                        c->setPi0(c->getPi() - (c->getPiH0() - d_PiNS) * dt / gamma / tauPi_bck);
+                        c->setPi0( (c->getPiH0_bck() - PiNS_bck) * dt / gamma / (tauPi_bck * tauPi_bck) * d_tauPi );
+                    }
+                    else
+                        c->setPi0(d_PiNS);
+#endif
+#ifndef CARTESIAN
+                    tau1 = tau - dt * 0.5;
+                    c->addpi0(0, 0, -2. * vz / tau1 * c->getpiH0(0, 3) * dt);  // *gamma/gamma
+                    c->addpi0(3, 3, -(2. * vz / tau1 * c->getpiH0(0, 3)) * dt);
+                    c->addpi0(
+                              3, 0,
+                              -(vz / tau1 * c->getpiH0(0, 0) + vz / tau1 * c->getpiH0(3, 3)) * dt);
+                    c->addpi0(1, 0, -vz / tau1 * c->getpiH0(1, 3) * dt);
+                    c->addpi0(2, 0, -vz / tau1 * c->getpiH0(2, 3) * dt);
+                    c->addpi0(3, 1, -(vz / tau1 * c->getpiH0(0, 1)) * dt);
+                    c->addpi0(3, 2, -(vz / tau1 * c->getpiH0(0, 2)) * dt);
+#endif
+                    // source from full IS equations (see draft for the description)
+                    for (int i = 0; i < 4; i++)
+                        for (int j = 0; j <= i; j++) {
+                            //        now transversality and cross terms
+                            c->addpi0(i, j, (- deltapipi * ( c->getpiH0(i, j) * du_bck + c->getpiH0_bck(i,j) * d_du ) ) / gamma * dt );
+                            c->addpi0(i, j, lambdapiPi * ( c->getPiH0() * sigNS_bck[i][j] + c->getPiH0_bck() * d_sigNS[i][j] ) / gamma * dt);
+                            for (int k = 0; k < 4; k++) {
+                                //         parts of terms with one internal summation index
+                                c->addpi0(i, j, phi7_bck * ( c->getpiH0_bck(i, k) * c->getpiH0(j, k) + c->getpiH0(i, k) * c->getpiH0_bck(j, k) ) * gmumu[k] / gamma * dt ); // first part of phi7
+                                c->addpi0(i, j, taupipi * 0.5 * ( c->getpiH0_bck(i, k) * d_sigNS[j][k] + c->getpiH0(i, k) * sigNS_bck[j][k] + c->getpiH0_bck(j, k) * d_sigNS[i][k] + c->getpiH0(j, k) * sigNS_bck[i][k] ) * gmumu[k] / gamma * dt ); // first part of taupipi
+                                c->addpi0(i, j, - d_u[k] * dpiH_bck[i][j][k] / gamma * dt );
+                                c->addpi0(i, j, d_phi7 * c->getpiH0_bck(i,k) * c->getpiH0_bck(j,k) * gmumu[k] / gamma * dt); // delta part of phi7
+                                
+                                //         parts of terms with two internal summation indexes
+                                for (int l = 0; l < 4; l++){
+                                    c->addpi0(i, j, - (c->getpiH0(i, k) * u_bck[j] + c->getpiH0(j, k) * u_bck[i]) * u_bck[l] * dmu_bck[l][k] * gmumu[k] / gamma * dt
+                                              - (c->getpiH0_bck(i, k) * u_bck[j] + c->getpiH0_bck(j, k) * u_bck[i]) * u_bck[l] * d_dmu[l][k] * gmumu[k] / gamma * dt
+                                              - d_u[k] * (u_bck[j] * u_bck[l] * dpiH_bck[k][i][l] + u_bck[i] * u_bck[l] * dpiH_bck[k][j][l]) * gmumu[k] / gamma * dt
+                                              - (u_bck[j] * c->getpiH0_bck(i, k) + u_bck[i] * c->getpiH0_bck(j, k)) * d_u[l] * dmu_bck[l][k] * gmumu[k] / gamma * dt );
+                                    c->addpi0(i, j, phi7_bck * ( ( c->getpiH0_bck(i, l) * u_bck[j] + c->getpiH0_bck(j, l) * u_bck[i] ) * u_bck[k] * c->getpiH0(k, l)
+                                                                - 2./3. * Delta[index44(i,j)] * (c->getpiH0_bck(k, l) * c->getpiH0(k, l) ) ) * gmumu[k] * gmumu[l] / gamma * dt ); // second part of phi7
+                                    c->addpi0(i, j, phi7_bck * ( - ( u_bck[j] * c->getpiH0_bck(i, l) + u_bck[i] * c->getpiH0_bck(j, l) ) * d_u[k] * c->getpiH0_bck(k, l)
+                                                                + 1./3 * ( d_u[i] * u_bck[j] + u_bck[i] * d_u[j] ) * c->getpiH0_bck(k, l) * c->getpiH0_bck(k, l) ) * gmumu[k] * gmumu[l] / gamma * dt ); // delta part of brackets for phi7
+                                    
+                                    c->addpi0(i, j, taupipi * ( 0.5 * ( c->getpiH0_bck(i, l) * u_bck[j] + c->getpiH0_bck(j, l) * u_bck[i] ) * u_bck[k] * d_sigNS[k][l]
+                                                               + 0.5 * ( sigNS_bck[j][l] * u_bck[i] + sigNS_bck[i][l] * u_bck[j] ) * u_bck[k] * c->getpiH0(k, l)
+                                                               - 1./3. * Delta[index44(i,j)] * (c->getpiH0_bck(k, l) * d_sigNS[k][l] + c->getpiH0(k, l) * sigNS_bck[k][l] ) ) * gmumu[k] * gmumu[l] / gamma * dt ); // second part of taupipi
+                                    c->addpi0(i, j, taupipi * ( - 0.5 * ( u_bck[j] * c->getpiH0_bck(i, l) + u_bck[i] * c->getpiH0_bck(j, l) ) * d_u[k] * sigNS_bck[k][l]
+                                                               - 0.5 * ( u_bck[i] * sigNS_bck[j][l] + u_bck[j] * sigNS_bck[i][l] ) * d_u[k] * c->getpiH0_bck(k, l)
+                                                               + 1./3 * ( d_u[i] * u_bck[j] + u_bck[i] * d_u[j] ) * c->getpiH0_bck(k, l) * sigNS_bck[k][l] ) * gmumu[k] * gmumu[l] / gamma * dt ); // delta part of brackets for taupipi
+                                    
+                                    c->addpi0(i, j, - 1. / 3. * Delta[index44(i,j)] * c->getpiH0_bck(k, l) * d_phi7 * c->getpiH0_bck(k, l) / gamma * 0.5 * dt);
+                                    c->addPi0(lamPipi * (c->getpiH0(k, l) * sigNS_bck[k][l] + c->getpiH0_bck(k, l) * d_sigNS[k][l] ) / gamma * dt);
+                                    
+                                    for (int r = 0; r < 4; r++) {//3 internal indices
+                                        c->addpi0(i, j, 2./3 * (gmunu[i][j] + 2 * u_bck[i] * u_bck[j]) * u_bck[k] * c->getpiH0(k, r) * u_bck[l] * dmu_bck[l][r] * gmumu[k] * gmumu[r] / gamma * dt );//?????????????????????
+                                        c->addpi0(i, j, ( 1./2 * ( ( d_u[j] * u_bck[r] + u_bck[j] * d_u[r] ) * ( gmunu[i][k] + u_bck[i] * u_bck[k] ) + ( d_u[i] * u_bck[k] + u_bck[i] * d_u[k] ) * ( gmunu[j][r] + u_bck[j] * u_bck[r] ) )
+                                                         + 1./2 * ( ( d_u[i] * u_bck[r] + u_bck[i] * d_u[r] ) * ( gmunu[j][k] + u_bck[j] * u_bck[k] ) + ( d_u[j] * u_bck[k] + u_bck[j] * d_u[k] ) * ( gmunu[i][r] + u_bck[i] * u_bck[r] ) )
+                                                         - 1./3 * ( ( d_u[k] * u_bck[r] + u_bck[k] * d_u[r] ) * ( gmunu[i][j] + u_bck[i] * u_bck[j] ) + ( d_u[i] * u_bck[j] + u_bck[i] * d_u[j] ) * ( gmunu[k][r] + u_bck[k] * u_bck[r] ) )
+                                                         ) * u_bck[l] * dpiH_bck[k][r][l] * gmumu[k] * gmumu[r] / gamma * dt );
+                                    }
+                                }
+                            }
+                        }
+                    c->addPi0(-delPiPi * ( c->getPiH0() * du_bck + c->getPiH0_bck() * d_du ) / gamma * dt);
+                }  // end non-empty cell
+            }   // end loop #1
         }
-    else
-     c->setPiH0(d_PiNS);
-#endif
-     // sources from Christoffel symbols from \dot pi_munu - only in tau-eta coordinate frame
-     #ifndef CARTESIAN
-     double tau1 = tau - dt * 0.75;
-     c->addpiH0(0, 0,
-                -2. * vz * c->getpi(0, 3) / tau1 * dt / 2.);  // *gamma/gamma
-     c->addpiH0(3, 3, -(2. * vz / tau1 * c->getpi(0, 3)) * dt / 2.);
-     c->addpiH0(
-         3, 0,
-         -(vz / tau1 * c->getpi(0, 0) + vz / tau1 * c->getpi(3, 3)) * dt / 2.);
-     c->addpiH0(1, 0, -vz / tau1 * c->getpi(1, 3) * dt / 2.);
-     c->addpiH0(2, 0, -vz / tau1 * c->getpi(2, 3) * dt / 2.);
-     c->addpiH0(3, 1, -(vz / tau1 * c->getpi(0, 1)) * dt / 2.);
-     c->addpiH0(3, 2, -(vz / tau1 * c->getpi(0, 2)) * dt / 2.);
-     #endif
-     // source from full IS equations (see  draft for the description)
-     for (int i = 0; i < 4; i++)
-      for (int j = 0; j <= i; j++) {
-//        now transversality and cross terms
-//          c->addpiH0(i, j, -xi[i][j]);
-          c->addpiH0(i, j, (- deltapipi * ( c->getpi(i, j) * du_bck + c->getpi_bck(i,j) * d_du ) ) / gamma * 0.5 * dt ); // the 4/3 source term
-          c->addpiH0(i, j, lambdapiPi * ( c->getPi() * sigNS_bck[i][j] + c->getPi_bck() * d_sigNS[i][j] ) / gamma * 0.5 * dt); // lambdapiPi
-       for (int k = 0; k < 4; k++) {
-//         parts of terms with one internal summation index
-        c->addpiH0(i, j, phi7_bck * ( c->getpi_bck(i, k) * c->getpi(j, k) + c->getpi(i, k) * c->getpi_bck(j, k) ) * gmumu[k] / gamma * 0.5 * dt ); // first part of phi7
-        c->addpiH0(i, j, taupipi * 0.5 * ( c->getpi_bck(i, k) * d_sigNS[j][k] + c->getpi(i, k) * sigNS_bck[j][k] + c->getpi_bck(j, k) * d_sigNS[i][k] + c->getpi(j, k) * sigNS_bck[i][k] ) * gmumu[k] / gamma * 0.5 * dt ); // first part of taupipi
-           c->addpiH0(i,j, - d_u[k] * dpi_bck[i][j][k] / gamma * 0.5 * dt );
-           c->addpiH0(i, j, d_phi7 * c->getpi_bck(i,k) * c->getpi_bck(j,k) * gmumu[k] / gamma * 0.5 * dt); // delta phi7 part
-//         parts of terms with two internal summation indexes
-        for (int l = 0; l < 4; l++){
-            c->addpiH0(i, j, - (c->getpi(i, k) * u_bck[j] + c->getpi(j, k) * u_bck[i]) * u_bck[l] * dmu_bck[l][k] * gmumu[k] / gamma * 0.5 * dt
-                             - (c->getpi_bck(i, k) * u_bck[j] + c->getpi_bck(j, k) * u_bck[i]) * u_bck[l] * d_dmu[l][k] * gmumu[k] / gamma * 0.5 * dt
-                             - d_u[k] * (u_bck[j] * u_bck[l] * dpi_bck[k][i][l] + u_bck[i] * u_bck[l] * dpi_bck[k][j][l]) * gmumu[k] / gamma * 0.5 * dt
-                             - (u_bck[j] * c->getpi_bck(i, k) + u_bck[i] * c->getpi_bck(j, k)) * d_u[l] * dmu_bck[l][k] * gmumu[k] / gamma * 0.5 * dt );
-            c->addpiH0(i, j, phi7_bck * ( ( c->getpi_bck(i, l) * u_bck[j] + c->getpi_bck(j, l) * u_bck[i] ) * u_bck[k] * c->getpi(k, l)
-                                      - 2./3. * Delta[index44(i,j)] * (c->getpi_bck(k, l) * c->getpi(k, l) ) ) * gmumu[k] * gmumu[l] / gamma * 0.5 * dt ); // second part of phi7
-            c->addpiH0(i, j, phi7_bck * ( - ( u_bck[j] * c->getpi_bck(i, l) + u_bck[i] * c->getpi_bck(j, l) ) * d_u[k] * c->getpi_bck(k, l)
-                                      + 1./3 * ( d_u[i] * u_bck[j] + u_bck[i] * d_u[j] ) * c->getpi_bck(k, l) * c->getpi_bck(k, l) ) * gmumu[k] * gmumu[l] / gamma * 0.5 * dt ); // delta part of brackets for phi7
-
-            c->addpiH0(i, j, taupipi * ( 0.5 * ( c->getpi_bck(i, l) * u_bck[j] + c->getpi_bck(j, l) * u_bck[i] ) * u_bck[k] * d_sigNS[k][l]
-                                       + 0.5 * ( sigNS_bck[j][l] * u_bck[i] + sigNS_bck[i][l] * u_bck[j] ) * u_bck[k] * c->getpi(k, l)
-                                       - 1./3. * Delta[index44(i,j)] * (c->getpi_bck(k, l) * d_sigNS[k][l] + c->getpi(k, l) * sigNS_bck[k][l] ) ) * gmumu[k] * gmumu[l] / gamma * 0.5 * dt ); // second part of taupipi
-            c->addpiH0(i, j, taupipi * ( - 0.5 * ( u_bck[j] * c->getpi_bck(i, l) + u_bck[i] * c->getpi_bck(j, l) ) * d_u[k] * sigNS_bck[k][l]
-                                         - 0.5 * ( u_bck[i] * sigNS_bck[j][l] + u_bck[j] * sigNS_bck[i][l] ) * d_u[k] * c->getpi_bck(k, l)
-                                         + 1./3 * ( d_u[i] * u_bck[j] + u_bck[i] * d_u[j] ) * c->getpi_bck(k, l) * sigNS_bck[k][l] ) * gmumu[k] * gmumu[l] / gamma * 0.5 * dt ); // delta part of brackets for taupipi
-            
-            c->addPiH0(lamPipi * (c->getpi(k, l) * sigNS_bck[k][l] + c->getpi_bck(k, l) * d_sigNS[k][l] ) / gamma * 0.5 * dt);
-            for (int r = 0; r < 4; r++) {//3 summation indeces
-                c->addpiH0(i, j, 2./3 * (gmunu[i][j] + 2 * u_bck[i] * u_bck[j]) * u_bck[k] * c->getpi(k, r) * u_bck[l] * dmu_bck[l][r] * gmumu[k] * gmumu[r] / gamma * 0.5 * dt );
-                c->addpiH0(i, j, ( 1./2 * ( ( d_u[j] * u_bck[r] + u_bck[j] * d_u[r] ) * ( gmunu[i][k] + u_bck[i] * u_bck[k] ) + ( d_u[i] * u_bck[k] + u_bck[i] * d_u[k] ) * ( gmunu[j][r] + u_bck[j] * u_bck[r] ) )
-                                 + 1./2 * ( ( d_u[i] * u_bck[r] + u_bck[i] * d_u[r] ) * ( gmunu[j][k] + u_bck[j] * u_bck[k] ) + ( d_u[j] * u_bck[k] + u_bck[j] * d_u[k] ) * ( gmunu[i][r] + u_bck[i] * u_bck[r] ) )
-                                 - 1./3 * ( ( d_u[k] * u_bck[r] + u_bck[k] * d_u[r] ) * ( gmunu[i][j] + u_bck[i] * u_bck[j] ) + ( d_u[i] * u_bck[j] + u_bck[i] * d_u[j] ) * ( gmunu[k][r] + u_bck[k] * u_bck[r] ) )
-                                 ) * u_bck[l] * dpi_bck[k][r][l] * gmumu[k] * gmumu[r] / gamma * 0.5 * dt );
-            }
-        }
-       }
-      }
-     c->addPiH0(-delPiPi * ( c->getPi() * du_bck + c->getPi_bck() * d_du ) / gamma * 0.5 * dt);
-        
-     for(int i = 0; i < 4; i++){//calculation of derivative of background pi^munu at the halfstep
-         for(int j = 0; j < 4; j++){
-             dpiH_bck[i][j][0] = (f->getCell(ix, iy, iz)->getpiH0_bck(i,j) - f->getCell(ix, iy, iz)->getpiH0_bck_prev(i,j)) / dt;
-             dpiH_bck[i][j][1] = 0.5 * (f->getCell(ix + 1, iy, iz)->getpiH0_bck(i,j) - f->getCell(ix - 1, iy, iz)->getpiH0_bck(i,j)) / dx;
-             dpiH_bck[i][j][2] = 0.5 * (f->getCell(ix, iy + 1, iz)->getpiH0_bck(i,j) - f->getCell(ix, iy - 1, iz)->getpiH0_bck(i,j)) / dy;
-             dpiH_bck[i][j][3] = 0.5 * (f->getCell(ix, iy, iz + 1)->getpiH0_bck(i,j) - f->getCell(ix, iy, iz - 1)->getpiH0_bck(i,j)) / dz / tauPlusHalf_0;
-         }
-     }
-        
-     // 1) relaxation(piH)+source(piH) terms for full-step
-     for (int i = 0; i < 4; i++)
-      for (int j = 0; j <= i; j++) {
-#ifdef FORMAL_SOLUTION
-       c->setpi0(i, j,
-                 (c->getpi(i, j) - d_piNS[i][j]) * exp(-dt / gamma / taupi_bck) +
-                     d_piNS[i][j]);
-       c->addpi0(i, j, (c->getpiH0_bck(i, j) - piNS_bck[i][j]) * dt / gamma / (taupi_bck*taupi_bck) * d_taupi );//H0 or not?
-
-#else
-      if(taupi_bck > 0.5 * dt){// modified condition
-              c->setpi0(i, j, c->getpi(i, j) -
-                        (c->getpiH0(i, j) - d_piNS[i][j] - xi[i][j]) * dt / gamma / taupi_bck);
-              c->addpi0(i, j, (c->getpiH0_bck(i, j) - piNS_bck[i][j]) * dt / gamma / (taupi_bck*taupi_bck) * d_taupi );
-//              c->addpi0(i, j, xi[i][j] * dt / gamma / taupi_bck);//adding the noise term
-          }
-      else
-          c->setpi0(i, j, d_piNS[i][j] + xi[i][j]);//adding the noise term
-#endif
-      }
-        
-#ifdef FORMAL_SOLUTION
-     c->setPi0((c->getPi() - d_PiNS) * exp(-dt / gamma / tauPi_bck) + d_PiNS);
-     c->setPi0( (c->getPiH0_bck() - PiNS_bck) * dt / gamma / (tauPi_bck * tauPi_bck) * d_tauPi );
-#else
-        if(tauPi_bck > 0.5 * dt){// modified condition
-            c->setPi0(c->getPi() - (c->getPiH0() - d_PiNS) * dt / gamma / tauPi_bck);
-            c->setPi0( (c->getPiH0_bck() - PiNS_bck) * dt / gamma / (tauPi_bck * tauPi_bck) * d_tauPi );
-        }
-        else
-            c->setPi0(d_PiNS);
-#endif
-     #ifndef CARTESIAN
-     tau1 = tau - dt * 0.5;
-     c->addpi0(0, 0, -2. * vz / tau1 * c->getpiH0(0, 3) * dt);  // *gamma/gamma
-     c->addpi0(3, 3, -(2. * vz / tau1 * c->getpiH0(0, 3)) * dt);
-     c->addpi0(
-         3, 0,
-         -(vz / tau1 * c->getpiH0(0, 0) + vz / tau1 * c->getpiH0(3, 3)) * dt);
-     c->addpi0(1, 0, -vz / tau1 * c->getpiH0(1, 3) * dt);
-     c->addpi0(2, 0, -vz / tau1 * c->getpiH0(2, 3) * dt);
-     c->addpi0(3, 1, -(vz / tau1 * c->getpiH0(0, 1)) * dt);
-     c->addpi0(3, 2, -(vz / tau1 * c->getpiH0(0, 2)) * dt);
-     #endif
-     // source from full IS equations (see draft for the description)
-        for (int i = 0; i < 4; i++)
-         for (int j = 0; j <= i; j++) {
-    //        now transversality and cross terms
-             c->addpi0(i, j, (- deltapipi * ( c->getpiH0(i, j) * du_bck + c->getpiH0_bck(i,j) * d_du ) ) / gamma * dt );
-             c->addpi0(i, j, lambdapiPi * ( c->getPiH0() * sigNS_bck[i][j] + c->getPiH0_bck() * d_sigNS[i][j] ) / gamma * dt);
-          for (int k = 0; k < 4; k++) {
-    //         parts of terms with one internal summation index
-              c->addpi0(i, j, phi7_bck * ( c->getpiH0_bck(i, k) * c->getpiH0(j, k) + c->getpiH0(i, k) * c->getpiH0_bck(j, k) ) * gmumu[k] / gamma * dt ); // first part of phi7
-              c->addpi0(i, j, taupipi * 0.5 * ( c->getpiH0_bck(i, k) * d_sigNS[j][k] + c->getpiH0(i, k) * sigNS_bck[j][k] + c->getpiH0_bck(j, k) * d_sigNS[i][k] + c->getpiH0(j, k) * sigNS_bck[i][k] ) * gmumu[k] / gamma * dt ); // first part of taupipi
-              c->addpi0(i, j, - d_u[k] * dpiH_bck[i][j][k] / gamma * dt );
-              c->addpi0(i, j, d_phi7 * c->getpiH0_bck(i,k) * c->getpiH0_bck(j,k) * gmumu[k] / gamma * dt); // delta part of phi7
-              
-    //         parts of terms with two internal summation indexes
-           for (int l = 0; l < 4; l++){
-               c->addpi0(i, j, - (c->getpiH0(i, k) * u_bck[j] + c->getpiH0(j, k) * u_bck[i]) * u_bck[l] * dmu_bck[l][k] * gmumu[k] / gamma * dt
-                            - (c->getpiH0_bck(i, k) * u_bck[j] + c->getpiH0_bck(j, k) * u_bck[i]) * u_bck[l] * d_dmu[l][k] * gmumu[k] / gamma * dt
-                            - d_u[k] * (u_bck[j] * u_bck[l] * dpiH_bck[k][i][l] + u_bck[i] * u_bck[l] * dpiH_bck[k][j][l]) * gmumu[k] / gamma * dt
-                            - (u_bck[j] * c->getpiH0_bck(i, k) + u_bck[i] * c->getpiH0_bck(j, k)) * d_u[l] * dmu_bck[l][k] * gmumu[k] / gamma * dt );
-               c->addpi0(i, j, phi7_bck * ( ( c->getpiH0_bck(i, l) * u_bck[j] + c->getpiH0_bck(j, l) * u_bck[i] ) * u_bck[k] * c->getpiH0(k, l)
-                                        - 2./3. * Delta[index44(i,j)] * (c->getpiH0_bck(k, l) * c->getpiH0(k, l) ) ) * gmumu[k] * gmumu[l] / gamma * dt ); // second part of phi7
-               c->addpi0(i, j, phi7_bck * ( - ( u_bck[j] * c->getpiH0_bck(i, l) + u_bck[i] * c->getpiH0_bck(j, l) ) * d_u[k] * c->getpiH0_bck(k, l)
-                                        + 1./3 * ( d_u[i] * u_bck[j] + u_bck[i] * d_u[j] ) * c->getpiH0_bck(k, l) * c->getpiH0_bck(k, l) ) * gmumu[k] * gmumu[l] / gamma * dt ); // delta part of brackets for phi7
-
-               c->addpi0(i, j, taupipi * ( 0.5 * ( c->getpiH0_bck(i, l) * u_bck[j] + c->getpiH0_bck(j, l) * u_bck[i] ) * u_bck[k] * d_sigNS[k][l]
-                                        + 0.5 * ( sigNS_bck[j][l] * u_bck[i] + sigNS_bck[i][l] * u_bck[j] ) * u_bck[k] * c->getpiH0(k, l)
-                                        - 1./3. * Delta[index44(i,j)] * (c->getpiH0_bck(k, l) * d_sigNS[k][l] + c->getpiH0(k, l) * sigNS_bck[k][l] ) ) * gmumu[k] * gmumu[l] / gamma * dt ); // second part of taupipi
-               c->addpi0(i, j, taupipi * ( - 0.5 * ( u_bck[j] * c->getpiH0_bck(i, l) + u_bck[i] * c->getpiH0_bck(j, l) ) * d_u[k] * sigNS_bck[k][l]
-                                        - 0.5 * ( u_bck[i] * sigNS_bck[j][l] + u_bck[j] * sigNS_bck[i][l] ) * d_u[k] * c->getpiH0_bck(k, l)
-                                        + 1./3 * ( d_u[i] * u_bck[j] + u_bck[i] * d_u[j] ) * c->getpiH0_bck(k, l) * sigNS_bck[k][l] ) * gmumu[k] * gmumu[l] / gamma * dt ); // delta part of brackets for taupipi
-
-               c->addpi0(i, j, - 1. / 3. * Delta[index44(i,j)] * c->getpiH0_bck(k, l) * d_phi7 * c->getpiH0_bck(k, l) / gamma * 0.5 * dt);
-               c->addPi0(lamPipi * (c->getpiH0(k, l) * sigNS_bck[k][l] + c->getpiH0_bck(k, l) * d_sigNS[k][l] ) / gamma * dt);
-               
-               for (int r = 0; r < 4; r++) {//3 internal indices
-                   c->addpi0(i, j, 2./3 * (gmunu[i][j] + 2 * u_bck[i] * u_bck[j]) * u_bck[k] * c->getpiH0(k, r) * u_bck[l] * dmu_bck[l][r] * gmumu[k] * gmumu[r] / gamma * dt );//?????????????????????
-                   c->addpi0(i, j, ( 1./2 * ( ( d_u[j] * u_bck[r] + u_bck[j] * d_u[r] ) * ( gmunu[i][k] + u_bck[i] * u_bck[k] ) + ( d_u[i] * u_bck[k] + u_bck[i] * d_u[k] ) * ( gmunu[j][r] + u_bck[j] * u_bck[r] ) )
-                                + 1./2 * ( ( d_u[i] * u_bck[r] + u_bck[i] * d_u[r] ) * ( gmunu[j][k] + u_bck[j] * u_bck[k] ) + ( d_u[j] * u_bck[k] + u_bck[j] * d_u[k] ) * ( gmunu[i][r] + u_bck[i] * u_bck[r] ) )
-                                - 1./3 * ( ( d_u[k] * u_bck[r] + u_bck[k] * d_u[r] ) * ( gmunu[i][j] + u_bck[i] * u_bck[j] ) + ( d_u[i] * u_bck[j] + u_bck[i] * d_u[j] ) * ( gmunu[k][r] + u_bck[k] * u_bck[r] ) )
-                                ) * u_bck[l] * dpiH_bck[k][r][l] * gmumu[k] * gmumu[r] / gamma * dt );
-               }
-           }
-          }
-         }
-        c->addPi0(-delPiPi * ( c->getPiH0() * du_bck + c->getPiH0_bck() * d_du ) / gamma * dt);
-    }  // end non-empty cell
-   }   // end loop #1
+    }
     
  // 3) -- advection ---
  // takes into account only the background velocity - from the look of the term with delta pi^munu time derivative
@@ -1264,11 +1316,11 @@ void Hydro::ISformal() {
             if (fabs(d_pi[i][j]) > maxpi) maxpi = fabs(d_pi[i][j]); // modified condition
         }
     bool rescaled = false;
-    if (maxT0 / maxpi < 1.2) { // I am not sure how this rescaling should work - if the fluctuation is comparable to background, then it should be rescaled?
+    if (maxT0 / maxpi < 1.) { // I am not sure how this rescaling should work - if the fluctuation is comparable to background, then it should be rescaled?
      for (int i = 0; i < 4; i++) //1.5 - 15%, 1.2 - 10%
       for (int j = 0; j < 4; j++) {
-       d_pi[i][j] = 0.1 * d_pi[i][j] * maxT0 / maxpi;
-       d_piH[i][j] = 0.1 * d_piH[i][j] * maxT0 / maxpi;
+       d_pi[i][j] = 0.1 * d_pi[i][j] * maxT0 / maxpi /1.;
+       d_piH[i][j] = 0.1 * d_piH[i][j] * maxT0 / maxpi /1.;
       }
      N_limit++;
      rescaled = true;
@@ -1279,7 +1331,7 @@ void Hydro::ISformal() {
      rescaled = true;
     }
     if (rescaled)
-     c->setViscCorrCutFlag(maxT0 / maxpi);
+     c->setViscCorrCutFlag(maxT0 / maxpi / 1.);
     else
      c->setViscCorrCutFlag(1.);
     // updating to the new values
@@ -1418,20 +1470,47 @@ void Hydro::performStep(double ctime) {
     int ny = f->getNY();
     int nz = f->getNZ();
     int total = nx * ny * nz;
-    int dims[3] = {nx, ny, nz};
+//    int dims[3] = {nx, ny, nz};
+    int dims[1] = {nx};
     double T00=0.;
     double T_mean[7]={0.,0.,0.,0.,0.,0.,0.};
     double variance_e = 0.;
+    double square_mean_e = 0.;
+    
+    double energy_density[nx][ny][nz];
+    for (int ix = 0; ix < f->getNX(); ix++) {
+        for (int iy = 0; iy < f->getNY(); iy++){
+            for (int iz = 0; iz < f->getNZ(); iz++){
+                double e, p, nb, nq, ns, vx, vy, vz, cs, T, mub, muq, mus;
+                double e__0, p__0, nb__0, nq__0, ns__0, vx__0, vy__0, vz__0, cs__0, T__0, mub__0, muq__0, mus__0;
+                Cell *c = f->getCell(ix, iy, iz);
+                c -> getPrimVarQbck(eos, tau, e__0, p__0, nb__0, nq__0, ns__0, vx__0, vy__0, vz__0);
+                c -> getPrimVar(eos, tau, e, p, nb, nq, ns, vx, vy, vz, e__0, p__0, nb__0, nq__0, ns__0, vx__0, vy__0, vz__0);
+                energy_density[ix][iy][iz] = e;
+            }
+        }
+    }
+    for (int ix = 0; ix < f->getNX(); ix++) {
+        double reference = energy_density[ix][0][0];
+        for (int iy = 0; iy < f->getNY(); iy++){
+            for (int iz = 0; iz < f->getNZ(); iz++){
+                if (reference - energy_density[ix][iy][iz] > 1e-10 ) {
+                    cout << "NOT THE SAME!!!!!!!    " << reference - energy_density[ix][iy][iz] << endl;
+                }
+            }
+        }
+    }
     
 //  Some stuff to print out the values
     std::vector<double> values; // vector for FFT
     for (int ix = 0; ix < f->getNX(); ix++) {
-        for (int iy = 0; iy < f->getNY(); iy++){
-            for (int iz = 0; iz < f->getNZ(); iz++){
+//        for (int iy = 0; iy < f->getNY(); iy++){
+//            for (int iz = 0; iz < f->getNZ(); iz++){
 //                double T00=0.;
                 double e, p, nb, nq, ns, vx, vy, vz, cs, T, mub, muq, mus;
                 double e__0, p__0, nb__0, nq__0, ns__0, vx__0, vy__0, vz__0, cs__0, T__0, mub__0, muq__0, mus__0;
-                Cell *c = f->getCell(ix, iy, iz);
+//                Cell *c = f->getCell(ix, iy, iz);
+                Cell *c = f->getCell(ix, 0, 0);
                 c -> getPrimVarQbck(eos, tau, e__0, p__0, nb__0, nq__0, ns__0, vx__0, vy__0, vz__0);
                 c -> getPrimVar(eos, tau, e, p, nb, nq, ns, vx, vy, vz, e__0, p__0, nb__0, nq__0, ns__0, vx__0, vy__0, vz__0);
 //                cs = eos->cs();
@@ -1444,35 +1523,45 @@ void Hydro::performStep(double ctime) {
                 double T00visc = c->getpi0(0, 0);// nebo H?
 //                cout << T_bck[0] << endl;
 //                cout << ctime << "  " << T00id << "     " << c->getpiH(0, 0) << "     " << c->getpi(0, 0) << "     " << xi00_cell[ix][iy][iz] << "    " << ix << "    " << iy << "    " << iz << endl;
-                T00 += T00id + T00visc;
+                T00 += (T00id + T00visc)/total;
+//                for (int i=0; i<7; i++) {
+//                    T_mean[i] += Tmunu[i]/total;
+//                }
                 for (int i=0; i<7; i++) {
-                    T_mean[i] += Tmunu[i]/total;
+                    T_mean[i] += Tmunu[i]/nx;
                 }
 //                double etaS, zetaS;
 //                trcoeff->getEta(e__0, nb__0, T__0, etaS, zetaS);
 //                values.push_back(T00);//toto
-                variance_e += e*e/total - e*e/total/total;
+//                variance_e += e*e/total - e*e/total/total;
+                square_mean_e += e*e/nx;
                 values.push_back(e);//toto
-            }
-        }
+//            }
+//        }
     }
+    variance_e = square_mean_e - T_mean[0]*T_mean[0];
+    
     ofstream myfile3;
-    myfile3.open ("./output/variance_e.dat", ios::app);
+    myfile3.open ("./output/variance_e_601_012_500_1D_NS.dat", ios::app);
     myfile3 << ctime << "      " << variance_e << endl;
     myfile3.close();
     
     ofstream myfile2;
-    myfile2.open ("./output/ENERGY_CONSERVATION_60_100.dat", ios::app);
-    myfile2 << T_mean[0] << "      " << T_mean[1] << "     " << T_mean[2] << "     " << T_mean[3] << endl;
+    myfile2.open ("./output/ENERGY_CONSERVATION_601_012_500_1D_NS.dat", ios::app);
+    myfile2 << ctime << "     " << T_mean[0] << "      " << T_mean[1] << "     " << T_mean[2] << "     " << T_mean[3] << endl;
     myfile2.close();
 
 //##################### FFT ################################
     if (ctime>59.98) {
         ofstream myfile;
-        kiss_fftnd_cfg cfg = kiss_fftnd_alloc(dims, 3, false, NULL, NULL);
-        kiss_fft_cpx *in = new kiss_fft_cpx[total];
-        kiss_fft_cpx *out = new kiss_fft_cpx[total];
-        for (int i=0; i<total; i++) {
+//        kiss_fftnd_cfg cfg = kiss_fftnd_alloc(dims, 3, false, NULL, NULL);
+        kiss_fftnd_cfg cfg = kiss_fftnd_alloc(dims, 1, false, NULL, NULL);
+//        kiss_fft_cpx *in = new kiss_fft_cpx[total];
+//        kiss_fft_cpx *out = new kiss_fft_cpx[total];
+        kiss_fft_cpx *in = new kiss_fft_cpx[nx];
+        kiss_fft_cpx *out = new kiss_fft_cpx[nx];
+//        for (int i=0; i<total; i++) {
+        for (int i=0; i<nx; i++) {
             in[i].r = values.at(i);
             in[i].i = 0.;
 //            out[i].r = 0.;
@@ -1481,41 +1570,75 @@ void Hydro::performStep(double ctime) {
         kiss_fftnd(cfg, in, out);
         free(cfg);
         
-        double xi_FT[nx][ny][nz];
+//        double xi_FT[nx][ny][nz];
+        double xi_FT[nx];
         double phase[nx][ny][nz];
-                double S_K[nx];
+        double S_K[nx];
         for (int ix=0; ix<nx; ix++) {
-            for (int iy=0; iy<ny; iy++) {
-                for (int iz=0; iz<nz; iz++) {
-                    xi_FT[ix][iy][iz] = 0.;
+//            for (int iy=0; iy<ny; iy++) {
+//                for (int iz=0; iz<nz; iz++) {
+//                    xi_FT[ix][iy][iz] = 0.;
+            xi_FT[ix] = 0.;
 //                    phase[ix][iy][iz] = 0.;
-                }
-            }
+//                }
+//            }
         }
-        myfile.open ("./output/FT_e_60_100.dat", ios::app);
+        myfile.open ("./output/FT_e_601_012_500_1D_NS_NS.dat", ios::app);
         int i = 0;
         for (int ix=0; ix<nx; ix++) {
-            for (int iy=0; iy<ny; iy++) {
-                for (int iz=0; iz<nz; iz++) {
-                    xi_FT[ix][iy][iz] = (out[i].r*out[i].r + out[i].i*out[i].i)/total;
-                    i++;
-                }
-            }
+//            for (int iy=0; iy<ny; iy++) {
+//                for (int iz=0; iz<nz; iz++) {
+//                    xi_FT[ix][iy][iz] = (out[i].r*out[i].r + out[i].i*out[i].i)/total/total;
+            xi_FT[ix] = (out[ix].r*out[ix].r + out[ix].i*out[ix].i)/nx/nx;
+//                    i++;
+//                }
+//            }
         }
         delete[] in;//
         delete[] out;//
 
-        for (int ix=0; ix<nx/2+1; ix++) {
-            for (int iy=0; iy<ny/2+1; iy++) {
-                for (int iz=0; iz<nz/2+1; iz++) {
-                    double absK = sqrt(ix*ix+iy*iy+iz*iz);
-                    myfile << ctime << "    " << xi_FT[ix][iy][iz] << "   " << ix << "   " << iy << "    " << iz << "    " << absK << endl;
+        for (int ix = 0; ix < nx; ix++) {
+                // Compute kx
+                int kx;
+                if (ix <= nx / 2) {
+                    kx = ix; // Positive frequency
+                } else {
+                    kx = ix - nx; // Negative frequency
                 }
-            }
+
+//                for (int iy = 0; iy < ny; iy++) {
+//                    // Compute ky
+//                    int ky;
+//                    if (iy <= ny / 2) {
+//                        ky = iy; // Positive frequency
+//                    } else {
+//                        ky = iy - ny; // Negative frequency
+//                    }
+//
+//                    for (int iz = 0; iz < nz; iz++) {
+//                        // Compute kz
+//                        int kz;
+//                        if (iz <= nz / 2) {
+//                            kz = iz; // Positive frequency
+//                        } else {
+//                            kz = iz - nz; // Negative frequency
+//                        }
+//                        double absK = sqrt(kx*kx+ky*ky+kz*kz);
+            double absK = sqrt(kx*kx);
+//                        myfile << ctime << "    " << xi_FT[ix][iy][iz] << "   " << ix << "   " << iy << "    " << iz << "    " << absK << endl;
+            myfile << ctime << "    " << xi_FT[ix] << "   " << ix << "   " << absK << endl;
+
+//                }
+//            }
         }
         myfile.close();
     }
 //####################### FFT end ##################################
+    
+//    int N_pred_e = 0;
+//    int N_pred_v = 0;
+//    int N_corr_e = 0;
+//    int N_corr_v = 0;
     
  //-----PREDICTOR-ideal
  for (int iy = 0; iy < f->getNY(); iy++)
@@ -1555,6 +1678,46 @@ void Hydro::performStep(double ctime) {
     c->updateQtoQhByFlux();
     c->clearFlux();
    }
+//    for (int iy = 0; iy < f->getNY(); iy++)
+//     for (int iz = 0; iz < f->getNZ(); iz++)
+//      for (int ix = 0; ix < f->getNX(); ix++) {
+//       Cell *c = f->getCell(ix, iy, iz);
+//          double d_Th_munu[7] = {0.,0.,0.,0.,0.,0.,0.};
+//          double bck_Th_munu[7] = {1.,0.,0.,0.,0.,0.,0.};
+//          c->getQh(d_Th_munu);
+////          c->getQhbck(bck_Th_munu);
+//          if (abs(d_Th_munu[0]) > bck_Th_munu[0]) {
+//              d_Th_munu[0] = 0.9 * bck_Th_munu[0];
+//              c->setQh(d_Th_munu);
+//              N_pred_e++;
+//
+//          }
+//          if (abs(d_Th_munu[0]  + bck_Th_munu[0]) < sqrt( d_Th_munu[1]*d_Th_munu[1] + d_Th_munu[2]*d_Th_munu[2] + d_Th_munu[3]*d_Th_munu[3] )) {
+//              double ratio = abs(d_Th_munu[0]  + bck_Th_munu[0] )/sqrt( d_Th_munu[1]*d_Th_munu[1] + d_Th_munu[2]*d_Th_munu[2] + d_Th_munu[3]*d_Th_munu[3] );
+//              d_Th_munu[1] = 0.9 * d_Th_munu[1] * ratio;
+//              d_Th_munu[2] = 0.9 * d_Th_munu[2] * ratio;
+//              d_Th_munu[3] = 0.9 * d_Th_munu[3] * ratio;
+//              c->setQh(d_Th_munu);
+//              N_pred_v++;
+//          }
+////          double d_e_, d_p_, d_nb_, d_nq_, d_ns_, d_vx_, d_vy_, d_vz_;
+////          double e_b_, p_b_, nb_b_, nq_b_, ns_b_, vx_b_, vy_b_, vz_b_;
+////          c -> getPrimVarQbck(eos, tau, e_b_, p_b_, nb_b_, nq_b_, ns_b_, vx_b_, vy_b_, vz_b_);
+////          c -> getPrimVar(eos, tau, d_e_, d_p_, d_nb_, d_nq_, d_ns_, d_vx_, d_vy_, d_vz_, e_b_, p_b_, nb_b_, nq_b_, ns_b_, vx_b_, vy_b_, vz_b_);
+////          if (d_e_ > e_b_) {
+////              d_e_ = 0.9 * e_b_;
+////              c->setPrimVarH(eos, tau, d_e_, d_nb_, d_nq_, d_ns_, d_vx_, d_vy_, d_vz_, e_b_, vx_b_, vy_b_, vz_b_);
+////              N_pred_e++;
+////          }
+////          double norm_v = sqrt(d_vx_*d_vx_ + d_vy_*d_vy_ + d_vz_*d_vz_);
+////          if (norm_v > 1.) {
+////              d_vx_ = 0.9 * d_vx_ * 1./norm_v;
+////              d_vy_ = 0.9 * d_vy_ * 1./norm_v;
+////              d_vz_ = 0.9 * d_vz_ * 1./norm_v;
+////              c->setPrimVarH(eos, tau, d_e_, d_nb_, d_nq_, d_ns_, d_vx_, d_vy_, d_vz_, e_b_, vx_b_, vy_b_, vz_b_);
+////              N_pred_v++;
+////          }
+//      }
 
  //----CORRECTOR-ideal
 
@@ -1589,6 +1752,51 @@ void Hydro::performStep(double ctime) {
     c->updateByFlux();
     c->clearFlux();
    }
+//    for (int iy = 0; iy < f->getNY(); iy++)
+//     for (int iz = 0; iz < f->getNZ(); iz++)
+//      for (int ix = 0; ix < f->getNX(); ix++) {
+//       Cell *c = f->getCell(ix, iy, iz);
+//          double d_T_munu[7] = {0.,0.,0.,0.,0.,0.,0.};
+//          double bck_T_munu[7] = {1.,0.,0.,0.,0.,0.,0.};
+//          c->getQ(d_T_munu);
+////          c->getQbck(bck_T_munu);
+//          if (abs(d_T_munu[0]) >= bck_T_munu[0]) {
+//              d_T_munu[0] = 0.9 * bck_T_munu[0];
+//              c->setQ(d_T_munu);
+//              N_corr_e++;
+//
+//          }
+//          if (abs(d_T_munu[0] + bck_T_munu[0]) < sqrt( d_T_munu[1]*d_T_munu[1] + d_T_munu[2]*d_T_munu[2] + d_T_munu[3]*d_T_munu[3] )) {
+//              double ratio = abs( d_T_munu[0] + bck_T_munu[0] )/sqrt( d_T_munu[1]*d_T_munu[1] + d_T_munu[2]*d_T_munu[2] + d_T_munu[3]*d_T_munu[3] );
+//              d_T_munu[1] = 0.9 * d_T_munu[1] * ratio;
+//              d_T_munu[2] = 0.9 * d_T_munu[2] * ratio;
+//              d_T_munu[3] = 0.9 * d_T_munu[3] * ratio;
+//              c->setQ(d_T_munu);
+//              N_corr_v++;
+//          }
+////          double e_b_, p_b_, nb_b_, nq_b_, ns_b_, vx_b_, vy_b_, vz_b_;
+////          c -> getPrimVarQbck(eos, tau, e_b_, p_b_, nb_b_, nq_b_, ns_b_, vx_b_, vy_b_, vz_b_);
+////          c -> getPrimVar(eos, tau, d_e_, d_p_, d_nb_, d_nq_, d_ns_, d_vx_, d_vy_, d_vz_, e_b_, p_b_, nb_b_, nq_b_, ns_b_, vx_b_, vy_b_, vz_b_);
+////          if (d_e_ > e_b_) {
+////              d_e_ = 0.9 * e_b_;
+////              c->setPrimVar(eos, tau, d_e_, d_nb_, d_nq_, d_ns_, d_vx_, d_vy_, d_vz_, e_b_, vx_b_, vy_b_, vz_b_);
+////              N_corr_e++;
+////          }
+////          double norm_v = sqrt(d_vx_*d_vx_ + d_vy_*d_vy_ + d_vz_*d_vz_);
+////          if (norm_v > 1.) {
+////              d_vx_ = 0.9 * d_vx_ * 1./norm_v;
+////              d_vy_ = 0.9 * d_vy_ * 1./norm_v;
+////              d_vz_ = 0.9 * d_vz_ * 1./norm_v;
+////              c->setPrimVar(eos, tau, d_e_, d_nb_, d_nq_, d_ns_, d_vx_, d_vy_, d_vz_, e_b_, vx_b_, vy_b_, vz_b_);
+////              N_corr_v++;
+////          }
+//      }
+//    cout << "pred/corr:     " << N_pred_e << "  " << N_pred_v << "  " << N_corr_e << "  " << N_corr_v << endl;
+//    N_pred_e = 0;
+//    N_pred_v = 0;
+//    N_corr_e = 0;
+//    N_corr_v = 0;
+    
  #ifdef CARTESIAN
  t += dt;
  #else
@@ -1599,8 +1807,13 @@ void Hydro::performStep(double ctime) {
  //===== viscous part ======
  if (trcoeff->isViscous()) {
   ISformal();  // evolution of viscous quantities according to IS equations
-  cout << N_el << "     " << N_er << "      " << N_limit << endl;
+//  cout << N_el_pred << "    " << N_er_pred << "     " << N_el_corr << "     " << N_er_corr << "      " << N_limit << endl;
+     cout << "N_limit:  " << N_limit << endl;
   N_limit = 0.;
+//  N_el_pred = 0.;
+//  N_er_pred = 0.;
+//  N_el_corr = 0.;
+//  N_er_corr = 0.;
   // X dir
   for (int iy = 0; iy < f->getNY(); iy++)
    for (int iz = 0; iz < f->getNZ(); iz++)
@@ -1624,7 +1837,24 @@ void Hydro::performStep(double ctime) {
 //        cout << ix << "     " << iy << "    " << iz << endl;
      visc_flux(f->getCell(ix, iy, iz), f->getCell(ix, iy, iz + 1), Z_, ix, iy, iz);
     }
-
+     double max_e = 0.;
+     double min_e = 0.;
+     int idx_max_e = 0;
+     int idy_max_e = 0;
+     int idz_max_e = 0;
+     int idx_min_e = 0;
+     int idy_min_e = 0;
+     int idz_min_e = 0;
+     double max_pi = 0.;
+     double min_pi = 0.;
+     int idx_max_pi = 0;
+     int idy_max_pi = 0;
+     int idz_max_pi = 0;
+     int idx_min_pi = 0;
+     int idy_min_pi = 0;
+     int idz_min_pi = 0;
+//     int N_visc_e = 0;
+//     int N_visc_v = 0;
   for (int iy = 0; iy < f->getNY(); iy++)
    for (int iz = 0; iz < f->getNZ(); iz++)
     for (int ix = 0; ix < f->getNX(); ix++) {
@@ -1632,12 +1862,130 @@ void Hydro::performStep(double ctime) {
      visc_source_step(ix, iy, iz);
      f->getCell(ix, iy, iz)->updateByViscFlux();
      f->getCell(ix, iy, iz)->clearFlux();
+//
+//              double d_T_munu[7] = {0.,0.,0.,0.,0.,0.,0.};
+//              double bck_T_munu[7] = {1.,0.,0.,0.,0.,0.,0.};
+//              c->getQ(d_T_munu);
+//    //          c->getQbck(bck_T_munu);
+//              if (abs(d_T_munu[0]) >= bck_T_munu[0]) {
+//                  d_T_munu[0] = 0.9 * bck_T_munu[0];
+//                  c->setQ(d_T_munu);
+//                  N_visc_e++;
+//
+//              }
+//              if (abs(d_T_munu[0] + bck_T_munu[0]) < sqrt( d_T_munu[1]*d_T_munu[1] + d_T_munu[2]*d_T_munu[2] + d_T_munu[3]*d_T_munu[3] )) {
+//                  double ratio = abs( d_T_munu[0] + bck_T_munu[0] )/sqrt( d_T_munu[1]*d_T_munu[1] + d_T_munu[2]*d_T_munu[2] + d_T_munu[3]*d_T_munu[3] );
+//                  d_T_munu[1] = 0.9 * d_T_munu[1] * ratio;
+//                  d_T_munu[2] = 0.9 * d_T_munu[2] * ratio;
+//                  d_T_munu[3] = 0.9 * d_T_munu[3] * ratio;
+//                  c->setQ(d_T_munu);
+//                  N_visc_v++;
+//              }
+//
+        double d_e_f, d_p_f, d_nb_f, d_nq_f, d_ns_f, d_vx_f, d_vy_f, d_vz_f;
+        double e_b, p_b, nb_b, nq_b, ns_b, vx_b, vy_b, vz_b;
+        c -> getPrimVarQbck(eos, tau, e_b, p_b, nb_b, nq_b, ns_b, vx_b, vy_b, vz_b);
+        c -> getPrimVar(eos, tau, d_e_f, d_p_f, d_nb_f, d_nq_f, d_ns_f, d_vx_f, d_vy_f, d_vz_f, e_b, p_b, nb_b, nq_b, ns_b, vx_b, vy_b, vz_b);
+//        if (d_e_f > e_b) {
+//            d_e_f = 0.9 * e_b;
+//            c->setPrimVar(eos, tau, d_e_f, d_nb_f, d_nq_f, d_ns_f, d_vx_f, d_vy_f, d_vz_f, e_b, vx_b, vy_b, vz_b);
+//            N_visc_e++;
+//        }
+//        double norma_v = sqrt(d_vx_f*d_vx_f + d_vy_f*d_vy_f + d_vz_f*d_vz_f);
+//        if (norma_v > 1.) {
+//            d_vx_f = 0.9 * d_vx_f * 1./norma_v;
+//            d_vy_f = 0.9 * d_vy_f * 1./norma_v;
+//            d_vz_f = 0.9 * d_vz_f * 1./norma_v;
+//            c->setPrimVar(eos, tau, d_e_f, d_nb_f, d_nq_f, d_ns_f, d_vx_f, d_vy_f, d_vz_f, e_b, vx_b, vy_b, vz_b);
+//            N_visc_v++;
+//        }
+        for(int i=0; i<4;i++){
+            for(int j=0; j<4;j++){
+                if (c->getpi(i,j) > max_pi){
+                    max_pi = c->getpi(i,j); // modified condition
+                    idx_max_pi = ix;
+                    idy_max_pi = iy;
+                    idz_max_pi = iz;
+                }
+            }
+        }
+        for(int i=0; i<4;i++){
+            for(int j=0; j<4;j++){
+                if (c->getpi(i,j) < min_pi){
+                    min_pi = c->getpi(i,j); // modified condition
+                    idx_min_pi = ix;
+                    idy_min_pi = iy;
+                    idz_min_pi = iz;
+                }
+            }
+        }
+        if(d_e_f > max_e){
+            max_e = d_e_f;
+            idx_max_e = ix;
+            idy_max_e = iy;
+            idz_max_e = iz;
+        }
+        if(d_e_f < min_e){
+            min_e = d_e_f;
+            idx_min_e = ix;
+            idy_min_e = iy;
+            idz_min_e = iz;
+        }
     }
-     cout << N_id << "      " << N_id_f << "    " << N_visc << "    " << N_visc_f << endl;
-     N_id = 0;
-     N_visc = 0;
-     N_id_f = 0;
-     N_visc_f = 0;
+     double T_max_e[7] = {0.,0.,0.,0.,0.,0.,0.};
+     double T_min_e[7] = {0.,0.,0.,0.,0.,0.,0.};
+     f->getCell(idx_max_e, idy_max_e, idz_max_e)->getQ(T_max_e);
+     f->getCell(idx_min_e, idy_min_e, idz_min_e)->getQ(T_min_e);
+     cout << endl;
+     cout << "max_e:    " << max_e << "     " << idx_max_e << "     " << idy_max_e << "     " << idz_max_e << endl;
+     cout << "T_max_e:  " << T_max_e[0] << "    " << T_max_e[1] << "    " << T_max_e[2] << "    " << T_max_e[3] << endl;
+     cout << "pi_max_e:" << endl;
+     for (int i = 0; i < 4; ++i) {
+         for (int j = 0; j < 4; ++j) {
+             cout << f->getCell(idx_max_e, idy_max_e, idz_max_e)->getpi(i,j) << "\t"; // Print each element followed by a tab
+         }
+         cout << endl; // Move to the next row
+     }
+     cout << "min_e:    " << min_e << "     " << idx_min_e << "     " << idy_min_e << "     " << idz_min_e << endl;
+     cout << "T_min_e:  " << T_min_e[0] << "    " << T_min_e[1] << "    " << T_min_e[2] << "    " << T_min_e[3] << endl;
+     cout << "pi_min_e:" << endl;
+     for (int i = 0; i < 4; ++i) {
+         for (int j = 0; j < 4; ++j) {
+             cout << f->getCell(idx_min_e, idy_min_e, idz_min_e)->getpi(i,j) << "\t"; // Print each element followed by a tab
+         }
+         cout << endl; // Move to the next row
+     }
+     cout << endl;
+     double T_max_pi[7] = {0.,0.,0.,0.,0.,0.,0.};
+     double T_min_pi[7] = {0.,0.,0.,0.,0.,0.,0.};
+     f->getCell(idx_max_pi, idy_max_pi, idz_max_pi)->getQ(T_max_pi);
+     f->getCell(idx_min_pi, idy_min_pi, idz_min_pi)->getQ(T_min_pi);
+     cout << "max_pi index:    " << idx_max_pi << "     " << idy_max_pi << "     " << idz_max_pi << endl;
+     cout << "T_max_pi:  " << T_max_pi[0] << "    " << T_max_pi[1] << "    " << T_max_pi[2] << "    " << T_max_pi[3] << endl;
+     cout << "max_pi:   " << max_pi << endl;
+     for (int i = 0; i < 4; ++i) {
+         for (int j = 0; j < 4; ++j) {
+             cout << f->getCell(idx_max_pi, idy_max_pi, idz_max_pi)->getpi(i,j) << "\t"; // Print each element followed by a tab
+         }
+         cout << endl; // Move to the next row
+     }
+     cout << "min_pi index:    " << idx_min_pi << "     " << idy_min_pi << "     " << idz_min_pi << endl;
+     cout << "T_min_pi:  " << T_min_pi[0] << "    " << T_min_pi[1] << "    " << T_min_pi[2] << "    " << T_min_pi[3] << endl;
+     cout << "min_pi:   " << min_pi << endl;
+     for (int i = 0; i < 4; ++i) {
+         for (int j = 0; j < 4; ++j) {
+             cout << f->getCell(idx_min_pi, idy_min_pi, idz_min_pi)->getpi(i,j) << "\t"; // Print each element followed by a tab
+         }
+         cout << endl; // Move to the next row
+     }
+     cout << endl;
+//     cout << "N_visc_e/v:   " << N_visc_e << "      " << N_visc_v << endl;
+
+//     cout << N_id << "      " << N_id_f << "    " << N_visc << "    " << N_visc_f << endl;
+//     N_id = 0;
+//     N_visc = 0;
+//     N_id_f = 0;
+//     N_visc_f = 0;
  } else {  // end viscous part
  }
  //==== finishing work ====

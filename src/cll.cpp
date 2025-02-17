@@ -469,6 +469,27 @@ void Cell::setPrimVar(EoS *eos, double tau, double _d_e, double _nb, double _nq,
   return;
  }
 }
+void Cell::setPrimVarH(EoS *eos, double tau, double _d_e, double _nb, double _nq,
+                      double _ns, double _d_vx, double _d_vy, double _d_vz, double e_bck, double vx_bck, double vy_bck, double vz_bck) {
+ const double gamma_bck = 1. / sqrt(1 - vx_bck * vx_bck - vy_bck * vy_bck - vz_bck * vz_bck);
+ double p_bck = eos->p(e_bck, _nb, _nq, _ns); // background pressure
+ const double d_p = eos->p(_d_e+e_bck, _nb, _nq, _ns) - eos->p(e_bck, _nb, _nq, _ns); // fluctuation of pressure - will this work even for non-linear EOS?
+ d_Qh[T_] = tau * ( (_d_e + d_p) * gamma_bck * gamma_bck - d_p );
+ d_Qh[X_] = tau * ( (e_bck + p_bck) * gamma_bck * _d_vx + (_d_e + d_p) * gamma_bck * gamma_bck * vx_bck );
+ d_Qh[Y_] = tau * ( (e_bck + p_bck) * gamma_bck * _d_vy + (_d_e + d_p) * gamma_bck * gamma_bck * vy_bck );
+ d_Qh[Z_] = tau * ( (e_bck + p_bck) * gamma_bck * _d_vz + (_d_e + d_p) * gamma_bck * gamma_bck * vz_bck );
+ d_Qh[NB_] = tau * _nb * gamma_bck; // not linearized
+ d_Qh[NQ_] = tau * _nq * gamma_bck; // not linearized
+ d_Qh[NS_] = tau * _ns * gamma_bck; // not linearized
+ if (std::isinf(d_Qh[NB_]) or std::isnan(d_Qh[NB_])) {
+  cout << "init error!\n";
+  eos->p(_d_e, _nb, _nq, _ns);
+  cout << "e = " << _d_e << " p = " << d_p << " vx = " << _d_vx << " vy = " << _d_vy
+       << " vz = " << _d_vz << endl;
+  //        exit(1) ;
+  return;
+ }
+}
 
 // function for setting of background variables
 void Cell::setPrimVarQbck(EoS *eos, double tau, double _e, double _nb, double _nq,

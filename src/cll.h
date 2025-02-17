@@ -269,6 +269,8 @@ public:
  // calculate and set Q from (e,n,v)
  void setPrimVar(EoS *eos, double tau, double _d_e, double _d_nb, double _d_nq,
                  double _d_ns, double _d_vx, double _d_vy, double _d_vz, double e_bck, double vx_bck, double vy_bck, double vz_bck);
+ void setPrimVarH(EoS *eos, double tau, double _d_e, double _nb, double _nq,
+                        double _ns, double _d_vx, double _d_vy, double _d_vz, double e_bck, double vx_bck, double vy_bck, double vz_bck);
  void setPrimVarQbck(EoS *eos, double tau, double _e, double _nb, double _nq,
                     double _ns, double _vx, double _vy, double _vz);
 
