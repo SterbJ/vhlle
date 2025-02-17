@@ -1400,7 +1400,7 @@ void Hydro::performStep(double ctime) {
                 double T00visc = c->getpi0(0, 0);// nebo H?
 //                cout << T_bck[0] << endl;
 //                cout << ctime << "  " << T00id << "     " << c->getpiH(0, 0) << "     " << c->getpi(0, 0) << "     " << xi00_cell[ix][iy][iz] << "    " << ix << "    " << iy << "    " << iz << endl;
-                T00 += T00id + T00visc;
+                T00 += (T00id + T00visc)/total;
                 for (int i=0; i<7; i++) {
                     T_mean[i] += Tmunu[i]/total;
                 }
