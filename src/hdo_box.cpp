@@ -1420,7 +1420,7 @@ void Hydro::performStep(double ctime) {
     
     ofstream myfile2;
     myfile2.open ("./output/ENERGY_CONSERVATION_60_100.dat", ios::app);
-    myfile2 << T_mean[0] << "      " << T_mean[1] << "     " << T_mean[2] << "     " << T_mean[3] << endl;
+    myfile2 << ctime << "   " << T_mean[0] << "      " << T_mean[1] << "     " << T_mean[2] << "     " << T_mean[3] << endl;
     myfile2.close();
 
 //##################### FFT ################################
