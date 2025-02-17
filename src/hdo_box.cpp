@@ -1264,11 +1264,11 @@ void Hydro::ISformal() {
             if (fabs(d_pi[i][j]) > maxpi) maxpi = fabs(d_pi[i][j]); // modified condition
         }
     bool rescaled = false;
-    if (maxT0 / maxpi < 1.2) { // I am not sure how this rescaling should work - if the fluctuation is comparable to background, then it should be rescaled?
+    if (maxT0 / maxpi < 1.) { // I am not sure how this rescaling should work - if the fluctuation is comparable to background, then it should be rescaled?
      for (int i = 0; i < 4; i++) //1.5 - 15%, 1.2 - 10%
       for (int j = 0; j < 4; j++) {
-       d_pi[i][j] = 0.1 * d_pi[i][j] * maxT0 / maxpi;
-       d_piH[i][j] = 0.1 * d_piH[i][j] * maxT0 / maxpi;
+       d_pi[i][j] = 0.1 * d_pi[i][j] * maxT0 / maxpi /1.;
+       d_piH[i][j] = 0.1 * d_piH[i][j] * maxT0 / maxpi /1.;
       }
      N_limit++;
      rescaled = true;
@@ -1279,7 +1279,7 @@ void Hydro::ISformal() {
      rescaled = true;
     }
     if (rescaled)
-     c->setViscCorrCutFlag(maxT0 / maxpi);
+     c->setViscCorrCutFlag(maxT0 / maxpi / 1.);
     else
      c->setViscCorrCutFlag(1.);
     // updating to the new values
