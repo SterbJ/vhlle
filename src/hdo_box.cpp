@@ -1462,10 +1462,32 @@ void Hydro::performStep(double ctime) {
         delete[] in;//
         delete[] out;//
 
-        for (int ix=0; ix<nx/2+1; ix++) {
-            for (int iy=0; iy<ny/2+1; iy++) {
-                for (int iz=0; iz<nz/2+1; iz++) {
-                    double absK = sqrt(ix*ix+iy*iy+iz*iz);
+        for (int ix = 0; ix < nx; ix++) {
+                // Compute kx
+                int kx;
+                if (ix <= nx / 2) {
+                    kx = ix; // Positive frequency
+                } else {
+                    kx = ix - nx; // Negative frequency
+                }
+                for (int iy = 0; iy < ny; iy++) {
+                    // Compute ky
+                    int ky;
+                    if (iy <= ny / 2) {
+                        ky = iy; // Positive frequency
+                    } else {
+                        ky = iy - ny; // Negative frequency
+                    }
+
+                    for (int iz = 0; iz < nz; iz++) {
+                        // Compute kz
+                        int kz;
+                        if (iz <= nz / 2) {
+                            kz = iz; // Positive frequency
+                        } else {
+                            kz = iz - nz; // Negative frequency
+                        }
+                    double absK = sqrt(kx*kx+ky*ky+kz*kz);
                     myfile << ctime << "    " << xi_FT[ix][iy][iz] << "   " << ix << "   " << iy << "    " << iz << "    " << absK << endl;
                 }
             }
