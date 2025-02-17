@@ -1270,7 +1270,6 @@ void Hydro::ISformal() {
        d_pi[i][j] = 0.1 * d_pi[i][j] * maxT0 / maxpi /1.;
        d_piH[i][j] = 0.1 * d_piH[i][j] * maxT0 / maxpi /1.;
       }
-     N_limit++;
      rescaled = true;
     }
     if (fabs(d_Pi) > d_p) {
@@ -1599,8 +1598,6 @@ void Hydro::performStep(double ctime) {
  //===== viscous part ======
  if (trcoeff->isViscous()) {
   ISformal();  // evolution of viscous quantities according to IS equations
-  cout << N_el << "     " << N_er << "      " << N_limit << endl;
-  N_limit = 0.;
   // X dir
   for (int iy = 0; iy < f->getNY(); iy++)
    for (int iz = 0; iz < f->getNZ(); iz++)
@@ -1633,11 +1630,6 @@ void Hydro::performStep(double ctime) {
      f->getCell(ix, iy, iz)->updateByViscFlux();
      f->getCell(ix, iy, iz)->clearFlux();
     }
-     cout << N_id << "      " << N_id_f << "    " << N_visc << "    " << N_visc_f << endl;
-     N_id = 0;
-     N_visc = 0;
-     N_id_f = 0;
-     N_visc_f = 0;
  } else {  // end viscous part
  }
  //==== finishing work ====
