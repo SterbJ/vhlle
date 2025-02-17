@@ -1377,6 +1377,7 @@ void Hydro::performStep(double ctime) {
     double T00=0.;
     double T_mean[7]={0.,0.,0.,0.,0.,0.,0.};
     double variance_e = 0.;
+    double square_mean_e = 0.;
     
 //  Some stuff to print out the values
     std::vector<double> values; // vector for FFT
@@ -1406,11 +1407,12 @@ void Hydro::performStep(double ctime) {
 //                double etaS, zetaS;
 //                trcoeff->getEta(e__0, nb__0, T__0, etaS, zetaS);
 //                values.push_back(T00);//toto
-                variance_e += e*e/total - e*e/total/total;
+                square_mean_e += e*e/total;
                 values.push_back(e);//toto
             }
         }
     }
+    variance_e = square_mean_e - T_mean[0]*T_mean[0];
     ofstream myfile3;
     myfile3.open ("./output/variance_e.dat", ios::app);
     myfile3 << ctime << "      " << variance_e << endl;
