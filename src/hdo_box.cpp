@@ -846,8 +846,48 @@ void Hydro::ISformal() {
             pr[i][j] = 0.;
         }
     }
- for (int ix = 0; ix < f->getNX(); ix++)
-  for (int iy = 0; iy < f->getNY(); iy++)
+ double etaS__, zetaS__; // constant ratio                                   this remove in 3D
+ trcoeff->getEta(1., 0., 0.156, etaS__, zetaS__); // obtains eta and zeta    this remove in 3D - values set by hand! for 1GeV background
+ double s_bck__ = eos->s(1., 0., 0., 0.); // background enthropy             this remove in 3D
+ double eta_bck__ = etaS__ * s_bck__; // eta0 - background viscosity         this remove in 3D
+ for (int ix = 0; ix < f->getNX(); ix++) {
+     //########################################### - for 1D
+     double xi[4][4];                                                        //this remove in 3D
+     double delta_[4][4] = {{0, 0, 0, 0},                                    //
+                           {0, -1, 0, 0},                                    //
+                           {0, 0, -1, 0},                                    //
+                           {0, 0, 0, -1}};                                   //
+     double Trxi = 0.;                                                       //
+     for (int i=0; i<4; i++) {                                               //
+         for (int j=0; j<4; j++) {                                           //
+             xi[i][j] = 0.;                                                  //
+         }                                                                   //
+     }                                                                       //
+     double size_x = f->getDx();                                             //
+     double volume = size_x;                                                 //
+     for (int i=0; i<4; i++) {                                               //
+         for (int j=0; j<=i; j++) {                                          //
+             double mean = 0.;                                               //
+             double sigma = sqrt(2 * eta_bck__ * 0.156 * (delta_[i][i] * delta_[j][j] + delta_[i][j] * delta_[j][i])) / (sqrt(dt) * pow(volume, 1./2.)) * sqrt(0.197);                                      //
+             Gauss.param(std::normal_distribution<double>::param_type(mean, sigma));         //
+             xi[i][j] = Gauss(rnd);                                          //
+             if (i!=j) {                                                     //
+                 xi[j][i] = xi[i][j];                                        //
+             }                                                               //
+             if (i==j) {                                                     //
+                 Trxi += xi[i][j];                                           //
+             }                                                               //
+         }                                                                   //
+     }                                                                       //
+     for (int i=0; i<4; i++) {                                               //
+         for (int j=0; j<4; j++) {                                           //
+             if (i==j && i!=0) {                                             //
+                 xi[i][j] -= 1./3. * Trxi;                                   //
+             }                                                               //
+         }                                                                   //
+     }                                                                       //
+     //######################
+  for (int iy = 0; iy < f->getNY(); iy++) {
    for (int iz = 0; iz < f->getNZ(); iz++) {
     Cell *c = f->getCell(ix, iy, iz);
     c->getPrimVarHCenterQbck(eos, tauMinusHalf, e_bck, p_bck, nb_bck, nq_bck, ns_bck, vx_bck, vy_bck, vz_bck);
@@ -944,44 +984,6 @@ void Hydro::ISformal() {
      trcoeff->getOtherBulk(e_bck, d_nb, d_nq, d_ns, delPiPi, lamPipi);
      if(tauPi_bck < 0.5 * dt)// modified condition
       delPiPi = lamPipi = 0.0;
-     //#############
-        //noise
-        double xi[4][4];
-        double delta[4][4];
-        double Trxi = 0.;
-        for (int i=0; i<4; i++) {
-            for (int j=0; j<4; j++) {
-                delta[i][j] = gmunu[i][j] - u_bck[i]*u_bck[j];
-                xi[i][j] = 0.;
-            }
-        }
-        double size_x = f->getDx();
-        double size_y = f->getDy();
-        double size_z = f->getDz();
-        double volume = size_x * size_y * size_z;
-        for (int i=0; i<4; i++) {
-            for (int j=0; j<=i; j++) {
-                double mean = 0.;
-                double sigma = sqrt(2 * eta_bck * T_bck * (delta[i][i] * delta[j][j] + delta[i][j] * delta[j][i])) / (sqrt(dt) * pow(volume, 1./2.)) * sqrt(0.197);
-                Gauss.param(std::normal_distribution<double>::param_type(mean, sigma));
-                xi[i][j] = Gauss(rnd);
-                if (i!=j) {
-                    xi[j][i] = xi[i][j];
-                }
-//                cout << xi[i][j] << "   " << i << "     " << j << endl;
-                if (i==j) {
-                    Trxi += xi[i][j];
-                }
-            }
-        }
-        for (int i=0; i<4; i++) {
-            for (int j=0; j<4; j++) {
-                if (i==j && i!=0) {
-                    xi[i][j] -= 1./3. * Trxi;
-                }
-            }
-        }
-        //######################
      double Delta[10]; // corresponds to background Delta
      // relaxation term, piH,PiH-->half-step
      for (int i = 0; i < 4; i++)
@@ -1173,6 +1175,8 @@ void Hydro::ISformal() {
          }
         c->addPi0(-delPiPi * ( c->getPiH0() * du_bck + c->getPiH0_bck() * d_du ) / gamma * dt);
     }  // end non-empty cell
+    } // loop z
+    } // loop y
    }   // end loop #1
     
  // 3) -- advection ---
@@ -1370,10 +1374,7 @@ void Hydro::performStep(double ctime) {
 
  tau_z = dt / 2. / log(1 + dt / 2. / tau);
     int nx = f->getNX();
-    int ny = f->getNY();
-    int nz = f->getNZ();
-    int total = nx * ny * nz;
-    int dims[3] = {nx, ny, nz};
+    int dims[1] = {nx};
     double T00=0.;
     double T_mean[7]={0.,0.,0.,0.,0.,0.,0.};
     double variance_e = 0.;
@@ -1382,12 +1383,10 @@ void Hydro::performStep(double ctime) {
 //  Some stuff to print out the values
     std::vector<double> values; // vector for FFT
     for (int ix = 0; ix < f->getNX(); ix++) {
-        for (int iy = 0; iy < f->getNY(); iy++){
-            for (int iz = 0; iz < f->getNZ(); iz++){
 //                double T00=0.;
                 double e, p, nb, nq, ns, vx, vy, vz, cs, T, mub, muq, mus;
                 double e__0, p__0, nb__0, nq__0, ns__0, vx__0, vy__0, vz__0, cs__0, T__0, mub__0, muq__0, mus__0;
-                Cell *c = f->getCell(ix, iy, iz);
+                Cell *c = f->getCell(ix, 0, 0);
                 c -> getPrimVarQbck(eos, tau, e__0, p__0, nb__0, nq__0, ns__0, vx__0, vy__0, vz__0);
                 c -> getPrimVar(eos, tau, e, p, nb, nq, ns, vx, vy, vz, e__0, p__0, nb__0, nq__0, ns__0, vx__0, vy__0, vz__0);
 //                cs = eos->cs();
@@ -1402,15 +1401,13 @@ void Hydro::performStep(double ctime) {
 //                cout << ctime << "  " << T00id << "     " << c->getpiH(0, 0) << "     " << c->getpi(0, 0) << "     " << xi00_cell[ix][iy][iz] << "    " << ix << "    " << iy << "    " << iz << endl;
                 T00 += T00id + T00visc;
                 for (int i=0; i<7; i++) {
-                    T_mean[i] += Tmunu[i]/total;
+                    T_mean[i] += Tmunu[i]/nx;
                 }
 //                double etaS, zetaS;
 //                trcoeff->getEta(e__0, nb__0, T__0, etaS, zetaS);
 //                values.push_back(T00);//toto
-                square_mean_e += e*e/total;
+                square_mean_e += e*e/nx;
                 values.push_back(e);//toto
-            }
-        }
     }
     variance_e = square_mean_e - T_mean[0]*T_mean[0];
     ofstream myfile3;
@@ -1426,10 +1423,10 @@ void Hydro::performStep(double ctime) {
 //##################### FFT ################################
     if (ctime>59.98) {
         ofstream myfile;
-        kiss_fftnd_cfg cfg = kiss_fftnd_alloc(dims, 3, false, NULL, NULL);
-        kiss_fft_cpx *in = new kiss_fft_cpx[total];
-        kiss_fft_cpx *out = new kiss_fft_cpx[total];
-        for (int i=0; i<total; i++) {
+        kiss_fftnd_cfg cfg = kiss_fftnd_alloc(dims, 1, false, NULL, NULL);
+        kiss_fft_cpx *in = new kiss_fft_cpx[nx];
+        kiss_fft_cpx *out = new kiss_fft_cpx[nx];
+        for (int i=0; i<nx; i++) {
             in[i].r = values.at(i);
             in[i].i = 0.;
 //            out[i].r = 0.;
@@ -1438,37 +1435,24 @@ void Hydro::performStep(double ctime) {
         kiss_fftnd(cfg, in, out);
         free(cfg);
         
-        double xi_FT[nx][ny][nz];
+        double xi_FT[nx];
         double phase[nx][ny][nz];
                 double S_K[nx];
         for (int ix=0; ix<nx; ix++) {
-            for (int iy=0; iy<ny; iy++) {
-                for (int iz=0; iz<nz; iz++) {
-                    xi_FT[ix][iy][iz] = 0.;
+                    xi_FT[ix] = 0.;
 //                    phase[ix][iy][iz] = 0.;
-                }
-            }
         }
         myfile.open ("./output/FT_e_60_100.dat", ios::app);
         int i = 0;
         for (int ix=0; ix<nx; ix++) {
-            for (int iy=0; iy<ny; iy++) {
-                for (int iz=0; iz<nz; iz++) {
-                    xi_FT[ix][iy][iz] = (out[i].r*out[i].r + out[i].i*out[i].i)/total;
-                    i++;
-                }
-            }
+                    xi_FT[ix] = (out[i].r*out[i].r + out[i].i*out[i].i)/nx;
         }
         delete[] in;//
         delete[] out;//
 
-        for (int ix=0; ix<nx/2+1; ix++) {
-            for (int iy=0; iy<ny/2+1; iy++) {
-                for (int iz=0; iz<nz/2+1; iz++) {
-                    double absK = sqrt(ix*ix+iy*iy+iz*iz);
-                    myfile << ctime << "    " << xi_FT[ix][iy][iz] << "   " << ix << "   " << iy << "    " << iz << "    " << absK << endl;
-                }
-            }
+        for (int ix=0; ix<nx; ix++) {
+                    double absK = sqrt(ix*ix);
+                    myfile << ctime << "    " << xi_FT[ix] << "   " << ix << absK << endl;
         }
         myfile.close();
     }
