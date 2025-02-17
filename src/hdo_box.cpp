@@ -1588,6 +1588,111 @@ void Hydro::performStep(double ctime) {
      f->getCell(ix, iy, iz)->updateByViscFlux();
      f->getCell(ix, iy, iz)->clearFlux();
     }
+     double max_e = 0.;
+     double min_e = 0.;
+     int idx_max_e = 0;
+     int idy_max_e = 0;
+     int idz_max_e = 0;
+     int idx_min_e = 0;
+     int idy_min_e = 0;
+     int idz_min_e = 0;
+     double max_pi = 0.;
+     double min_pi = 0.;
+     int idx_max_pi = 0;
+     int idy_max_pi = 0;
+     int idz_max_pi = 0;
+     int idx_min_pi = 0;
+     int idy_min_pi = 0;
+     int idz_min_pi = 0;
+     for (int iy = 0; iy < f->getNY(); iy++)
+      for (int iz = 0; iz < f->getNZ(); iz++)
+       for (int ix = 0; ix < f->getNX(); ix++) {
+           Cell *c = f->getCell(ix, iy, iz);
+           double d_e_f, d_p_f, d_nb_f, d_nq_f, d_ns_f, d_vx_f, d_vy_f, d_vz_f;
+           double e_b, p_b, nb_b, nq_b, ns_b, vx_b, vy_b, vz_b;
+           c -> getPrimVarQbck(eos, tau, e_b, p_b, nb_b, nq_b, ns_b, vx_b, vy_b, vz_b);
+           c -> getPrimVar(eos, tau, d_e_f, d_p_f, d_nb_f, d_nq_f, d_ns_f, d_vx_f, d_vy_f, d_vz_f, e_b, p_b, nb_b, nq_b, ns_b, vx_b, vy_b, vz_b);
+           for(int i=0; i<4;i++){
+               for(int j=0; j<4;j++){
+                   if (c->getpi(i,j) > max_pi){
+                       max_pi = c->getpi(i,j); // modified condition
+                       idx_max_pi = ix;
+                       idy_max_pi = iy;
+                       idz_max_pi = iz;
+                   }
+               }
+           }
+           for(int i=0; i<4;i++){
+               for(int j=0; j<4;j++){
+                   if (c->getpi(i,j) < min_pi){
+                       min_pi = c->getpi(i,j); // modified condition
+                       idx_min_pi = ix;
+                       idy_min_pi = iy;
+                       idz_min_pi = iz;
+                   }
+               }
+           }
+           if(d_e_f > max_e){
+               max_e = d_e_f;
+               idx_max_e = ix;
+               idy_max_e = iy;
+               idz_max_e = iz;
+           }
+           if(d_e_f < min_e){
+               min_e = d_e_f;
+               idx_min_e = ix;
+               idy_min_e = iy;
+               idz_min_e = iz;
+           }
+       }
+        double T_max_e[7] = {0.,0.,0.,0.,0.,0.,0.};
+        double T_min_e[7] = {0.,0.,0.,0.,0.,0.,0.};
+        f->getCell(idx_max_e, idy_max_e, idz_max_e)->getQ(T_max_e);
+        f->getCell(idx_min_e, idy_min_e, idz_min_e)->getQ(T_min_e);
+        cout << endl;
+        cout << "max_e:    " << max_e << "     " << idx_max_e << "     " << idy_max_e << "     " << idz_max_e << endl;
+        cout << "T_max_e:  " << T_max_e[0] << "    " << T_max_e[1] << "    " << T_max_e[2] << "    " << T_max_e[3] << endl;
+        cout << "pi_max_e:" << endl;
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                cout << f->getCell(idx_max_e, idy_max_e, idz_max_e)->getpi(i,j) << "\t"; // Print each element followed by a tab
+            }
+            cout << endl; // Move to the next row
+        }
+        cout << "min_e:    " << min_e << "     " << idx_min_e << "     " << idy_min_e << "     " << idz_min_e << endl;
+        cout << "T_min_e:  " << T_min_e[0] << "    " << T_min_e[1] << "    " << T_min_e[2] << "    " << T_min_e[3] << endl;
+        cout << "pi_min_e:" << endl;
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                cout << f->getCell(idx_min_e, idy_min_e, idz_min_e)->getpi(i,j) << "\t"; // Print each element followed by a tab
+            }
+            cout << endl; // Move to the next row
+        }
+        cout << endl;
+        double T_max_pi[7] = {0.,0.,0.,0.,0.,0.,0.};
+        double T_min_pi[7] = {0.,0.,0.,0.,0.,0.,0.};
+        f->getCell(idx_max_pi, idy_max_pi, idz_max_pi)->getQ(T_max_pi);
+        f->getCell(idx_min_pi, idy_min_pi, idz_min_pi)->getQ(T_min_pi);
+        cout << "max_pi index:    " << idx_max_pi << "     " << idy_max_pi << "     " << idz_max_pi << endl;
+        cout << "T_max_pi:  " << T_max_pi[0] << "    " << T_max_pi[1] << "    " << T_max_pi[2] << "    " << T_max_pi[3] << endl;
+        cout << "max_pi:   " << max_pi << endl;
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                cout << f->getCell(idx_max_pi, idy_max_pi, idz_max_pi)->getpi(i,j) << "\t"; // Print each element followed by a tab
+            }
+            cout << endl; // Move to the next row
+        }
+        cout << "min_pi index:    " << idx_min_pi << "     " << idy_min_pi << "     " << idz_min_pi << endl;
+        cout << "T_min_pi:  " << T_min_pi[0] << "    " << T_min_pi[1] << "    " << T_min_pi[2] << "    " << T_min_pi[3] << endl;
+        cout << "min_pi:   " << min_pi << endl;
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                cout << f->getCell(idx_min_pi, idy_min_pi, idz_min_pi)->getpi(i,j) << "\t"; // Print each element followed by a tab
+            }
+            cout << endl; // Move to the next row
+        }
+        cout << endl;
+       }
  } else {  // end viscous part
  }
  //==== finishing work ====
