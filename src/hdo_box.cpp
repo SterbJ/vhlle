@@ -1454,7 +1454,7 @@ void Hydro::performStep(double ctime) {
         for (int ix=0; ix<nx; ix++) {
             for (int iy=0; iy<ny; iy++) {
                 for (int iz=0; iz<nz; iz++) {
-                    xi_FT[ix][iy][iz] = (out[i].r*out[i].r + out[i].i*out[i].i)/total;
+                    xi_FT[ix][iy][iz] = (out[i].r*out[i].r + out[i].i*out[i].i)/total/total;
                     i++;
                 }
             }
@@ -1714,7 +1714,6 @@ void Hydro::performStep(double ctime) {
             cout << endl; // Move to the next row
         }
         cout << endl;
-       }
  } else {  // end viscous part
  }
  //==== finishing work ====
