@@ -1445,7 +1445,7 @@ void Hydro::performStep(double ctime) {
         myfile.open ("./output/FT_e_60_100.dat", ios::app);
         int i = 0;
         for (int ix=0; ix<nx; ix++) {
-                    xi_FT[ix] = (out[i].r*out[i].r + out[i].i*out[i].i)/nx;
+                    xi_FT[ix] = (out[i].r*out[i].r + out[i].i*out[i].i)/nx/nx;
         }
         delete[] in;//
         delete[] out;//
@@ -1683,7 +1683,6 @@ void Hydro::performStep(double ctime) {
             cout << endl; // Move to the next row
         }
         cout << endl;
-       }
  } else {  // end viscous part
  }
  //==== finishing work ====
