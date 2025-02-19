@@ -1436,7 +1436,7 @@ void Hydro::performStep(double ctime) {
 //            out[i].i = 0.;
         }
         kiss_fftnd(cfg, in, out);
-        free(cfg);
+        kiss_fft_free(cfg);
         
         double xi_FT[nx][ny][nz];
         double phase[nx][ny][nz];
